@@ -1,0 +1,7 @@
+.vscode
+.vscode/
+venv
+venv/
+out
+out/
+out/*
