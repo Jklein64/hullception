@@ -1,0 +1,19 @@
+{
+    "name": "renderer",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "dev": "parcel src/index.html"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "parcel-bundler": "^1.9.4",
+        "typescript": "^4.3.5"
+    },
+    "dependencies": {
+        "three": "^0.130.1"
+    }
+}
