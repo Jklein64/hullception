@@ -1,4 +1,5 @@
 import * as THREE from "three"
+import { TrackballControls } from "three/examples/jsm/controls/TrackballControls";
 
 const CUBE_SIDE = 1000
 
@@ -9,7 +10,7 @@ const fov = 45
 const near = 1
 const aspect = window.innerWidth / window.innerHeight
 const camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
-camera.position.set(0, 0, CUBE_SIDE * 3)
+camera.position.set(CUBE_SIDE * 2, CUBE_SIDE * 2, CUBE_SIDE * 2)
 camera.lookAt(new THREE.Vector3(0, 0, 0))
 
 // create scene
@@ -45,8 +46,6 @@ const points = new THREE.Points(geometry, material);
 const bodies = new THREE.Group()
 bodies.add(points)
 bodies.add(...createAxes())
-// TODO figure out why 315 degrees is a magic number
-bodies.setRotationFromEuler(new THREE.Euler(Math.PI / 4, 5.49779, 0))
 scene.add(bodies)
 
 // position canvas
@@ -63,6 +62,18 @@ renderer.setPixelRatio(window.devicePixelRatio)
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 renderer.render(scene, camera)
+
+// set up orbit controls
+const controls = new TrackballControls(camera, renderer.domElement)
+controls.noPan = true
+controls.noZoom = true
+controls.rotateSpeed = Math.PI
+controls.target.set(0, 0, 0)
+
+renderer.setAnimationLoop(() => {
+    controls.update()
+    renderer.render(scene, camera)
+})
 
 function createAxes() {
     const rescale = (...[x, y, z]: number[]) => new THREE.Vector3(x, y, z).multiplyScalar(CUBE_SIDE).subScalar(CUBE_SIDE / 2)
@@ -93,64 +104,6 @@ function createAxes() {
     })
 }
 
-// #endregion
-
-// #region keyboard controls
-type Key = "w" | "a" | "s" | "d" | "q" | "e"
-
-const pressed = new Proxy({
-    w: false,
-    a: false,
-    s: false,
-    d: false,
-    q: false,
-    e: false,
-}, {
-    // onPressedChange callback
-    set(target, p, value, receiver) {
-        // offsets are in global reference since relative would be confusing.
-        const offset = THREE.MathUtils.degToRad(10)
-        // pitch
-        if (pressed.w)
-            bodies.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), -offset)
-        if (pressed.s)
-            bodies.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), offset)
-        // yaw
-        if (pressed.a)
-            bodies.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), -offset)
-        if (pressed.d)
-            bodies.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), offset)
-        // roll
-        if (pressed.q)
-            bodies.rotateOnWorldAxis(new THREE.Vector3(0, 0, 1), offset)
-        if (pressed.e)
-            bodies.rotateOnWorldAxis(new THREE.Vector3(0, 0, 1), -offset)
-        // render
-        renderer.render(scene, camera)
-        // pass through
-        return Reflect.set(target, p, value, receiver)
-    }
-}) as Record<Key, boolean>
-
-// record keypress status
-document.addEventListener("keydown", e => {
-    if ("wasdqe".includes(e.key)) {
-        const key = e.key as Key
-        pressed[key] = true
-    } else if (e.key == "Enter") {
-        // reset camera
-        bodies.setRotationFromEuler(new THREE.Euler(Math.PI / 4, 5.49779, 0))
-        renderer.render(scene, camera)
-    }
-})
-
-// record keypress status
-document.addEventListener("keyup", e => {
-    if ("wasdqe".includes(e.key)) {
-        const key = e.key as Key
-        pressed[key] = false
-    }
-})
 // #endregion
 
 // update canvas on window resize
