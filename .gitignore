@@ -5,3 +5,6 @@ venv/
 out
 out/
 out/*
+node_modules
+.cache
+dist
