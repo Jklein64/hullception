@@ -129,9 +129,6 @@ function toNormalizedDeviceCoordinates(vector: THREE.Vector3 | THREE.Vector2) {
         camera.getWorldDirection(look)
 
         const plane = new THREE.Plane(look)
-        const helper = new THREE.PlaneHelper(plane, CUBE_SIDE)
-        scene.add(helper)
-
         const raycaster = new THREE.Raycaster()
         raycaster.setFromCamera(new THREE.Vector2(
             (x / window.innerWidth) * 2 - 1,
