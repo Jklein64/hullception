@@ -1,6 +1,7 @@
 import * as THREE from "three"
 
-import { controls, scene, positions } from "./initialize";
+import { controls, scene, positions } from "./initialize"
+import { LARGE_POINT, SELECTED_COLOR } from "./constants"
 
 type State = {
     selectionEnabled: boolean,
@@ -40,7 +41,7 @@ const state: State = new Proxy({
             // update selected points to be white in color
             const selectedGeometry = new THREE.BufferGeometry()
             selectedGeometry.setFromPoints(value as THREE.Vector3[])
-            const selectedMaterial = new THREE.PointsMaterial({ size: 25, color: "#ffffff" })
+            const selectedMaterial = new THREE.PointsMaterial({ size: LARGE_POINT, color: SELECTED_COLOR })
             const selectedPoints = new THREE.Points(selectedGeometry, selectedMaterial)
             selectedPoints.name = "selectedPoints"
 

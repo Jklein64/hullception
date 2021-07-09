@@ -1,7 +1,7 @@
 import * as THREE from "three"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
 
-import { CUBE_SIDE } from "./constants";
+import { CUBE_SIDE, PARTICLES, SMALL_POINT } from "./constants"
 
 // position canvas
 const canvas = document.createElement("canvas")
@@ -34,11 +34,10 @@ controls.target.set(0, 0, 0)
 // create particles and material
 const pointsGeometry = new THREE.BufferGeometry()
 const color = new THREE.Color()
-const particles = 10000
 export const positions: THREE.Vector3[] = []
 const colors: number[] = []
 // randomly set particles
-for (let i = 0; i < particles; i++) {
+for (let i = 0; i < PARTICLES; i++) {
     // positions
     const x = Math.random() * CUBE_SIDE - CUBE_SIDE / 2
     const y = Math.random() * CUBE_SIDE - CUBE_SIDE / 2
@@ -53,7 +52,7 @@ for (let i = 0; i < particles; i++) {
 }
 pointsGeometry.setFromPoints(positions)
 pointsGeometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3))
-const pointsMaterial = new THREE.PointsMaterial({ size: 15, vertexColors: true })
+const pointsMaterial = new THREE.PointsMaterial({ size: SMALL_POINT, vertexColors: true })
 const points = new THREE.Points(pointsGeometry, pointsMaterial)
 
 // add to scene
