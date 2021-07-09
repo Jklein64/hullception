@@ -6,7 +6,6 @@ const CUBE_SIDE = 750
 // position canvas
 const canvas = document.createElement("canvas")
 canvas.style.position = "fixed"
-// @ts-expect-error
 canvas.style.inset = "0"
 
 // create, configure, and add renderer
