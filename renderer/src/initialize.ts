@@ -1,7 +1,7 @@
 import * as THREE from "three"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
 
-const CUBE_SIDE = 750
+import { CUBE_SIDE } from "./constants";
 
 // position canvas
 const canvas = document.createElement("canvas")
