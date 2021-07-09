@@ -95,7 +95,7 @@ function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
     const selected: THREE.Vector3[] = []
     for (const position of positions) {
         // NOTE not sure why .clone() is needed here; I would expect Vectors to be immutable
-        const [x, y] = toNormalizedDeviceCoordinates(position.clone()).toArray()
+        const { x, y } = toNormalizedDeviceCoordinates(position.clone())
         if (Math.min(start.x, end.x) <= x && x <= Math.max(start.x, end.x)) // horizontal
             if (Math.min(start.y, end.y) <= y && y <= Math.max(start.y, end.y)) // vertical
                 selected.push(position)
