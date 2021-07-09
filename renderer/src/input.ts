@@ -70,17 +70,36 @@ document.addEventListener("pointerup", () => {
         state.selectionEnabled = false
     }
 })
-const testpoint = positions[0]
-scene.add(new THREE.Points(
-    new THREE.BufferGeometry().setFromPoints([testpoint]),
-    new THREE.PointsMaterial({ size: 50, color: "#ffffff" })
-))
+// const testpoint = positions[0]
+// scene.add(new THREE.Points(
+//     new THREE.BufferGeometry().setFromPoints([testpoint]),
+//     new THREE.PointsMaterial({ size: 50, color: "#ffffff" })
+// ))
 
-console.log(toNormalizedDeviceCoordinates(testpoint))
+// console.log(toNormalizedDeviceCoordinates(testpoint))
 
 function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
     // TODO
+    [start, end] = [start, end].map(toNormalizedDeviceCoordinates)
     console.log(`selected from ${start.toArray()} to ${end.toArray()}`)
+    const inside = {
+        x: (n: number) => Math.min(start.x, end.x) <= n && n <= Math.max(start.x, end.x),
+        y: (n: number) => Math.min(start.y, end.y) <= n && n <= Math.max(start.y, end.y)
+    }
+
+    const contained: THREE.Vector3[] = []
+    for (const position of positions) {
+        const [x, y] = toNormalizedDeviceCoordinates(position.clone()).toArray()
+        if (inside.x(x) && inside.y(y))
+            contained.push(position)
+    }
+
+    scene.add(
+        new THREE.Points(
+            new THREE.BufferGeometry().setFromPoints(contained),
+            new THREE.PointsMaterial({ size: 25, color: "#ffffff" })
+        )
+    )
 }
 
 
@@ -94,10 +113,15 @@ function rectangleFromTwoPoints(start: THREE.Vector2, end: THREE.Vector2) {
     ]
 }
 
+/**
+* Calculate and return the Normalized Device Coordinates (NDC) of the given vector.
+* Returns a `THREE.Vector2` which represents the `x` and `y` positions of the point on the screen on the range [-1, 1]
+*/
 function toNormalizedDeviceCoordinates(vector: THREE.Vector3 | THREE.Vector2) {
+    let normalized = new THREE.Vector3()
     if (vector instanceof THREE.Vector3) {
         // NOTE assumes that `vector` is in world space
-        return vector.project(camera)
+        normalized.copy(vector.project(camera))
     } else {
         // TODO do I need to do all this projection stuff?
         const [x, y] = vector.toArray()
@@ -116,6 +140,10 @@ function toNormalizedDeviceCoordinates(vector: THREE.Vector3 | THREE.Vector2) {
 
         const intersection = new THREE.Vector3()
         raycaster.ray.intersectPlane(plane, intersection)!
-        return intersection.project(camera)
+        normalized.copy(intersection.project(camera))
     }
+
+    // remove z since NDC only really cares about x and y
+    const [x, y, _] = normalized.toArray()
+    return new THREE.Vector2(x, y)
 }
