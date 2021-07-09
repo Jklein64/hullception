@@ -1,4 +1,5 @@
 import * as THREE from "three"
+
 import { controls, scene, positions } from "./initialize";
 
 type State = {
@@ -54,6 +55,7 @@ const state: State = new Proxy({
 window.addEventListener("keydown", ({ key }) => {
     if (key === "Shift") state.selectionEnabled = true
     if (key === "Escape") state.selectionEnabled = false
+    if (key === "Enter") controls.reset()
 
 })
 
@@ -123,26 +125,13 @@ function rectangleFromTwoPoints(start: THREE.Vector2, end: THREE.Vector2) {
  */
 function toNormalizedDeviceCoordinates(vector: THREE.Vector3 | THREE.Vector2) {
     const camera = scene.getObjectByName("camera") as THREE.Camera
-    const normalized = new THREE.Vector3()
-    if (vector instanceof THREE.Vector3) {
+    if (vector instanceof THREE.Vector3)
         // NOTE assumes that `vector` is in world space
-        normalized.copy(vector.project(camera))
-    } else {
-        // TODO do I need to do all this projection stuff?
-        const [x, y] = vector.toArray()
-        const look = camera.getWorldDirection(new THREE.Vector3())
-        const plane = new THREE.Plane(look)
-        const raycaster = new THREE.Raycaster()
-        raycaster.setFromCamera(new THREE.Vector2(
-            (x / window.innerWidth) * 2 - 1,
-            -1 * ((y / window.innerHeight) * 2 - 1)
-        ), camera)
-
-        const intersection = raycaster.ray.intersectPlane(plane, new THREE.Vector3())!
-        normalized.copy(intersection.project(camera))
-    }
-
-    // remove z since NDC only really cares about x and y
-    const [x, y, _] = normalized.toArray()
-    return new THREE.Vector2(x, y)
+        // remove z since NDC only really cares about x and y
+        return new THREE.Vector2(
+            ...vector.project(camera).toArray().slice(0, 2))
+    else
+        return new THREE.Vector2(
+            (vector.x / window.innerWidth) * 2 - 1,
+            -1 * ((vector.y / window.innerHeight) * 2 - 1))
 }
