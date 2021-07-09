@@ -34,7 +34,7 @@ controls.target.set(0, 0, 0)
 // create particles and material
 const pointsGeometry = new THREE.BufferGeometry()
 const color = new THREE.Color()
-const particles = 1000
+const particles = 10000
 export const positions: THREE.Vector3[] = []
 const colors: number[] = []
 // randomly set particles
