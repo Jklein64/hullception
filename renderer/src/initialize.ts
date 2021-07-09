@@ -57,8 +57,9 @@ pointsGeometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3)
 const pointsMaterial = new THREE.PointsMaterial({ size: 15, vertexColors: true })
 const points = new THREE.Points(pointsGeometry, pointsMaterial)
 
-// create scene
+// add to scene
 export const scene = new THREE.Scene()
+scene.add(camera)
 scene.add(points)
 
 // create axes
