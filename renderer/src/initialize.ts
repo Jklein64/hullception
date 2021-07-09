@@ -1,15 +1,13 @@
 import * as THREE from "three"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
 
-export const CUBE_SIDE = 750
+const CUBE_SIDE = 750
 
 // position canvas
 const canvas = document.createElement("canvas")
 canvas.style.position = "fixed"
-canvas.style.top = "0"
-canvas.style.bottom = "0"
-canvas.style.left = "0"
-canvas.style.right = "0"
+// @ts-expect-error
+canvas.style.inset = "0"
 
 // create, configure, and add renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true, canvas })
@@ -22,9 +20,10 @@ const far = 5000
 const fov = 45
 const near = 1
 const aspect = window.innerWidth / window.innerHeight
-export const camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
+const camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
 camera.position.set(CUBE_SIDE * 2, CUBE_SIDE * 2, CUBE_SIDE * 2)
 camera.lookAt(new THREE.Vector3(0, 0, 0))
+camera.name = "camera"
 
 // set up orbit controls
 export const controls = new TrackballControls(camera, renderer.domElement)
