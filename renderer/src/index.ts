@@ -48,7 +48,7 @@ const material = new THREE.PointsMaterial({ size: 15, vertexColors: true })
 // create and add point cloud
 const points = new THREE.Points(geometry, material);
 const bodies = new THREE.Group()
-bodies.add(points)
+// bodies.add(points)
 bodies.add(...createAxes())
 scene.add(bodies)
 
@@ -152,7 +152,8 @@ document.addEventListener("pointerup", e => {
     polygon.removeAttribute("points")
 
     if (selecting) {
-        const toNDC = (p: THREE.Vector2) => new THREE.Vector2((p.x / innerWidth) * 2 - 1, (-p.x / innerHeight) * 2 + 1)
+        const toNDC = (p: THREE.Vector2) =>
+            new THREE.Vector2((p.x / window.innerWidth) * 2 - 1, -1 * ((p.y / window.innerHeight) * 2 - 1))
         // handle projection of selection
         const cameraLookVector = camera.getWorldDirection(new THREE.Vector3(0, 0, 0))
         const plane = new THREE.Plane(cameraLookVector)
@@ -160,48 +161,47 @@ document.addEventListener("pointerup", e => {
 
         const raycast = new THREE.Raycaster()
         rectangleFromMouse(start, end).forEach(point => {
-            raycast.setFromCamera({
-                x: (point.x / window.innerWidth) * 2 - 1,
-                y: -1 * ((point.y / window.innerHeight) * 2 - 1)
-            }, camera)
+            raycast.setFromCamera(toNDC(point), camera)
 
             const intersection = new THREE.Vector3()
             raycast.ray.intersectPlane(plane, intersection)
             intersections.push(intersection)
         })
         // complete the loop
-        intersections.push(intersections[0])
+        console.log(intersections)
 
-        const lineg = new THREE.BufferGeometry()
-        lineg.setFromPoints(intersections)
-        scene.add(new THREE.Line(lineg, new THREE.LineBasicMaterial({ color: "#ffffff" })))
-        // const pointsGeometry = new THREE.BufferGeometry()
-        // const projectedPoints: THREE.Vector3[] = []
-        // const projectedColors: number[] = []
-        // for (let i = 0; i < particles; i += 3) {
-        //     const x = points.geometry.getAttribute("position").array[i]
-        //     const y = points.geometry.getAttribute("position").array[i + 1]
-        //     const z = points.geometry.getAttribute("position").array[i + 2]
-        //     const point = new THREE.Vector3(x, y, z)
-        //     const projected = new THREE.Vector3()
-        //     plane.projectPoint(point, projected)
-        //     projectedPoints.push(projected)
-        //     projectedColors.push(x / CUBE_SIDE + .5, y / CUBE_SIDE + .5, z / CUBE_SIDE + .5)
-        // }
-        // pointsGeometry.setAttribute("position", new THREE.Float32BufferAttribute(projectedPoints.flatMap(p => p.toArray()), 3))
-        // pointsGeometry.setAttribute("color", new THREE.Float32BufferAttribute(projectedColors, 3))
-        // scene.add(new THREE.Points(pointsGeometry, material))
+        const lineGeometry = new THREE.BufferGeometry()
+        lineGeometry.setFromPoints([...intersections, intersections[0]])
+        scene.add(new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: "#ffffff" })))
+
+        const pointsGeometry = new THREE.BufferGeometry()
+        const projectedPoints: THREE.Vector3[] = []
+        const projectedColors: number[] = []
+        for (let i = 0; i < particles; i += 3) {
+            const x = points.geometry.getAttribute("position").array[i]
+            const y = points.geometry.getAttribute("position").array[i + 1]
+            const z = points.geometry.getAttribute("position").array[i + 2]
+            const point = new THREE.Vector3(x, y, z)
+            const projected = new THREE.Vector3()
+            plane.projectPoint(point, projected)
+            projectedPoints.push(projected)
+            projectedColors.push(x / CUBE_SIDE + .5, y / CUBE_SIDE + .5, z / CUBE_SIDE + .5)
+        }
+        pointsGeometry.setAttribute("position", new THREE.Float32BufferAttribute(projectedPoints.flatMap(p => p.toArray()), 3))
+        pointsGeometry.setAttribute("color", new THREE.Float32BufferAttribute(projectedColors, 3))
+        scene.add(new THREE.Points(pointsGeometry, material))
 
 
 
         // get normalized device coordinates (NDC) for the corners of the selection rectangle
         // const [startNDC, endNDC] = new Array(start, end).map(p =>
         //     new THREE.Vector2((p.x / innerWidth) * 2 - 1, -1 * ((p.x / innerHeight) * 2 - 1)))
-        const xMin = Math.min(...intersections.map(v => v.x))
-        const xMax = Math.max(...intersections.map(v => v.x))
-        const yMin = Math.min(...intersections.map(v => v.y))
-        const yMax = Math.max(...intersections.map(v => v.y))
-        console.log(xMin, xMax, yMin, yMax)
+        const xMin = Math.min(...intersections.map(v => v.project(camera).x))
+        const xMax = Math.max(...intersections.map(v => v.project(camera).x))
+        const yMin = Math.min(...intersections.map(v => v.project(camera).y))
+        const yMax = Math.max(...intersections.map(v => v.project(camera).y))
+        // console.log(intersections.map(v => v.project(camera)))
+        // console.log(xMin, xMax, yMin, yMax)
         // get NDCs for each of the points and compare against the selection's
         const selected: THREE.Vector3[] = []
         for (const position of positions) {
@@ -210,7 +210,8 @@ document.addEventListener("pointerup", e => {
             const y = projected.y
             if (xMin < x && x < xMax && yMin < y && y < yMax) {
                 // TODO handle points inside of the selection
-                selected.push(position.clone().projectOnPlane(cameraLookVector))
+                // console.log(projected)
+                selected.push(position.clone())
             }
         }
 
@@ -218,7 +219,7 @@ document.addEventListener("pointerup", e => {
         g.setFromPoints(selected)
         const m = new THREE.PointsMaterial({ size: 30, color: "#ffffff" })
         scene.add(new THREE.Points(g, m))
-        console.log(selected)
+        // console.log(selected)
     }
 })
 
@@ -231,10 +232,7 @@ window.addEventListener("resize", () => {
     renderer.render(scene, camera)
 })
 
-/**
- * given two `THREE/Vector2`s, return four points that would make a rectangle
- * in the order: TopLeft, TopRight, BottomRight, BottomLeft.
- */
+
 function rectangleFromMouse(start: THREE.Vector2, end: THREE.Vector2) {
     return [
         new THREE.Vector2(start.x, start.y),
