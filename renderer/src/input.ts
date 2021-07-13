@@ -55,7 +55,10 @@ const state: State = new Proxy({
 
 window.addEventListener("keydown", ({ key }) => {
     if (key === "Shift") state.selectionEnabled = true
-    if (key === "Escape") state.selectionEnabled = false
+    if (key === "Escape")
+        state.selectionEnabled
+            ? (state.selectionEnabled = false)
+            : (state.selectedList = [])
     if (key === "Enter") controls.reset()
 
 })
