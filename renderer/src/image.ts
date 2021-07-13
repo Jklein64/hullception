@@ -2,26 +2,15 @@ import { IMAGE_WIDTH } from "./constants"
 import { setPointCloud } from "./initialize"
 import VectorRGBXY from "./VectorRGBXY"
 
-type State = {
-    context: CanvasRenderingContext2D | undefined,
-    imageData: ImageData | undefined,
-    pointData: VectorRGBXY[] | undefined
-}
-
-const state: State = new Proxy({
-    context: undefined,
-    imageData: undefined,
-    pointData: undefined
-}, {
-})
+let
+    context: CanvasRenderingContext2D,
+    imageData: ImageData
 
 document.addEventListener("DOMContentLoaded", () => {
-    const input = document.querySelector("#image-form > input")!
-
+    // grab elements
+    const input = document.querySelector("#image-form > input") as HTMLInputElement
     const canvas = document.getElementById("image-canvas") as HTMLCanvasElement
-
-    const context = canvas.getContext("2d", { alpha: false })!
-    state.context = context
+    context = canvas.getContext("2d", { alpha: false })!
 
     input.addEventListener("change", e => {
         // get file
@@ -48,18 +37,17 @@ document.addEventListener("DOMContentLoaded", () => {
             context.drawImage(image, ...dimensions)
 
             // get image data and create points
-            const imageData = context.getImageData(...dimensions)
-            const data: VectorRGBXY[] = []
-            for (let i = 0; i < imageData.data.length; i += 4) {
-                const [r, g, b,] = imageData.data.slice(i, i + 4)
+            const newImageData = context.getImageData(...dimensions)
+            const newPointData: VectorRGBXY[] = []
+            for (let i = 0; i < newImageData.data.length; i += 4) {
+                const [r, g, b,] = newImageData.data.slice(i, i + 4)
                 const x = (i / 4) % canvas.width
                 const y = Math.trunc((i / 4) / canvas.width)
-                data.push(new VectorRGBXY(r / 255, g / 255, b / 255, x, y))
+                newPointData.push(new VectorRGBXY(r / 255, g / 255, b / 255, x, y))
             }
 
             // update state
-            state.imageData = imageData
-            state.pointData = data
+            imageData = newImageData
 
             // add points to scene
             setPointCloud(data)
@@ -79,29 +67,30 @@ export function showPointsInImage(selected: VectorRGBXY[], blendmode: "source-ov
 
         // multiply blend mode with a 0 or 255 only layer is effectively a mask
         context.globalCompositeOperation = blendmode
-        window.createImageBitmap(imageData).then(bitmap => {
-            context.drawImage(bitmap, 0, 0)
 
-            // create new solid, opaque, black image
-            const mask = new ImageData(
-                new Uint8ClampedArray(imageData.data.length)
-                    .map((_, i) => (i + 1) % 4 === 0 ? 255 : 0),
-                imageData.width,
-                imageData.height)
+        // lay down first layer
+        const imageBitmap = await window.createImageBitmap(imageData)
+        context.drawImage(imageBitmap, 0, 0)
 
-            // reveal the selected parts
-            for (const vector of selected) {
-                const { x, y } = vector.xy
-                const i = y * IMAGE_WIDTH + x
-                mask.data[i * 4 + 0] = 255 // r
-                mask.data[i * 4 + 1] = 255 // g
-                mask.data[i * 4 + 2] = 255 // b
-                mask.data[i * 4 + 3] = 255 // a
-            }
+        // create new solid, opaque, black image
+        const mask = new ImageData(
+            new Uint8ClampedArray(imageData.data.length)
+                .map((_, i) => (i + 1) % 4 === 0 ? 255 : 0),
+            imageData.width,
+            imageData.height)
 
-            window.createImageBitmap(mask).then(bitmap => {
-                context.drawImage(bitmap, 0, 0)
-            })
-        })
+        // reveal the selected parts
+        for (const vector of selected) {
+            const { x, y } = vector.xy
+            const i = y * IMAGE_WIDTH + x
+            mask.data[i * 4 + 0] = 255 // r
+            mask.data[i * 4 + 1] = 255 // g
+            mask.data[i * 4 + 2] = 255 // b
+            mask.data[i * 4 + 3] = 255 // a
+        }
+
+        // mask out the unselected parts
+        const maskBitmap = await window.createImageBitmap(mask)
+        context.drawImage(maskBitmap, 0, 0)
     }
 }
