@@ -1,6 +1,6 @@
 import * as THREE from "three"
 
-import { controls, scene, positions } from "./initialize"
+import { controls, scene, getPointCloud } from "./initialize"
 import { LARGE_POINT, SELECTED_COLOR } from "./constants"
 
 type State = {
@@ -96,7 +96,7 @@ function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
     // clear previous selection.
     // TODO maybe add a feature for additive selection, like photoshop?
     const selected: THREE.Vector3[] = []
-    for (const position of positions) {
+    for (const position of getPointCloud()) {
         // NOTE not sure why .clone() is needed here; I would expect Vectors to be immutable
         const { x, y } = toNormalizedDeviceCoordinates(position.clone())
         if (Math.min(start.x, end.x) <= x && x <= Math.max(start.x, end.x)) // horizontal

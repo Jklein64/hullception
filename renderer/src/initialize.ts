@@ -2,6 +2,7 @@ import * as THREE from "three"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
 
 import { CUBE_SIDE, PARTICLES, SMALL_POINT } from "./constants"
+import VectorRGBXY from "./VectorRGBXY"
 
 // position canvas
 const canvas = document.createElement("canvas")
@@ -33,7 +34,7 @@ controls.target.set(0, 0, 0)
 
 // create particles and material
 const color = new THREE.Color()
-export const positions: THREE.Vector3[] = []
+const positions: THREE.Vector3[] = []
 const colors: number[] = []
 // randomly set particles
 for (let i = 0; i < PARTICLES; i++) {
@@ -53,7 +54,7 @@ for (let i = 0; i < PARTICLES; i++) {
 // add to scene
 export const scene = new THREE.Scene()
 scene.add(camera)
-createPointCloud(positions, colors)
+setPointCloud(positions, colors)
 // scene.add(points)
 
 // create axes
@@ -103,7 +104,7 @@ window.addEventListener("resize", () => {
  * for each position in positions (but flattened), creates a new `THREE.Points`
  * object and adds it to the scene.
  */
-export function createPointCloud(positions: THREE.Vector3[], colors: number[]) {
+export function setPointCloud(positions: THREE.Vector3[], colors: number[]) {
     // remove previous point cloud if it exists
     const previous = scene.getObjectByName("pointsObject")
     if (previous) scene.remove(previous)
@@ -117,5 +118,17 @@ export function createPointCloud(positions: THREE.Vector3[], colors: number[]) {
 
     // add to scene
     scene.add(pointsObject)
+}
+
+export function getPointCloud() {
+    const pointsObject = scene.getObjectByName("pointsObject") as THREE.Points
+    const pointsFlattened = Array.from(pointsObject.geometry.getAttribute("position").array)
+    const points: THREE.Vector3[] = []
+    for (let i = 0; i < pointsFlattened.length; i += 3) {
+        const [x, y, z] = pointsFlattened.slice(i, i + 3)
+        points.push(new THREE.Vector3(x, y, z))
+    }
+
+    return points
 }
 
