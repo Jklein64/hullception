@@ -14,4 +14,8 @@ export default class VectorRGBXY {
     get xyz() {
         return new THREE.Vector3(...this.rgb.toArray()).multiplyScalar(CUBE_SIDE).subScalar(CUBE_SIDE / 2)
     }
+
+    equals(other: VectorRGBXY) {
+        return this.rgb.equals(other.rgb) && this.xy.equals(other.xy)
+    }
 }

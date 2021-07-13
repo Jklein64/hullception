@@ -33,11 +33,18 @@
             position: fixed;
             top: 16px;
             left: 16px;
-            color: white;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             gap: 8px;
+        }
+
+        #image-form * {
+            color: white;
+        }
+
+        #image-form input[type="file"] {
+            width: 100%;
         }
     </style>
 </head>
@@ -51,6 +58,10 @@
 
     <form id="image-form">
         <input type="file">
+        <section>
+            <input type="checkbox" name="blendmode" id="blendmode">
+            <label for="blendmode">Show actual color</label>
+        </section>
     </form>
 </body>
 

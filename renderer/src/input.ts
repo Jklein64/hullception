@@ -1,19 +1,22 @@
 import * as THREE from "three"
 
 import { controls, scene, getPointCloud } from "./initialize"
-import { LARGE_POINT, SELECTED_COLOR, CUBE_SIDE } from "./constants"
+import { LARGE_POINT, SELECTED_COLOR } from "./constants"
+import { showPointsInImage } from "./image"
 import VectorRGBXY from "./VectorRGBXY"
 
 type State = {
     selectionEnabled: boolean,
     selectionBox: [THREE.Vector2, THREE.Vector2] | undefined,
-    selectedList: VectorRGBXY[]
+    selectedList: VectorRGBXY[],
+    blendMultiply: boolean
 }
 
 const state: State = new Proxy({
     selectionEnabled: false,
     selectionBox: undefined,
-    selectedList: []
+    selectedList: [],
+    blendMultiply: false
 }, {
     set(target: State, p: keyof State, value: unknown, receiver) {
         if (p === "selectionEnabled") {
@@ -35,19 +38,27 @@ const state: State = new Proxy({
         }
 
         else if (p === "selectedList") {
+            const selectedList = value as VectorRGBXY[]
+
             // remove old selection
             const previous = scene.getObjectByName("selectedPoints")
             if (previous) scene.remove(previous)
 
             // update selected points to be white in color
             const selectedGeometry = new THREE.BufferGeometry()
-            selectedGeometry.setFromPoints((<VectorRGBXY[]>value).map(v => v.xyz))
+            selectedGeometry.setFromPoints(selectedList.map(v => v.xyz))
             const selectedMaterial = new THREE.PointsMaterial({ size: LARGE_POINT, color: SELECTED_COLOR })
             const selectedPoints = new THREE.Points(selectedGeometry, selectedMaterial)
             selectedPoints.name = "selectedPoints"
 
             // add to scene
             scene.add(selectedPoints)
+            showPointsInImage(selectedList, state.blendMultiply ? "multiply" : "source-over")
+        }
+
+        else if (p === "blendMultiply") {
+            const blendMultiply = value as boolean
+            showPointsInImage(state.selectedList, blendMultiply ? "multiply" : "source-over")
         }
 
         // pass state change through
@@ -91,6 +102,14 @@ document.addEventListener("pointerup", () => {
         handleSelection(state.selectionBox)
         state.selectionBox = undefined
     }
+})
+
+window.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("blendmode")!.addEventListener("change", e => {
+        // NOTE typescript is being dumb here... it isn't very good at events
+        const checked = (<any>e.target).checked as boolean
+        state.blendMultiply = checked
+    })
 })
 
 function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
