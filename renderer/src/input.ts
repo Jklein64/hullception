@@ -18,51 +18,54 @@ const state: State = new Proxy({
     selectedList: [],
     blendMultiply: false
 }, {
-    set(target: State, p: keyof State, value: unknown, receiver) {
-        if (p === "selectionEnabled") {
-            // disable controls when selecting
-            controls.enabled = !(value as boolean)
-            if (value as boolean === false)
-                // clear `selectionBox` when `selectionEnabled` is disabled
-                state.selectionBox = undefined
+    // first arg is old state
+    set(_, property: keyof State) {
+        // pass state change through before so it can be used later
+        const result = Reflect.set(...(arguments as unknown as Parameters<typeof Reflect.set>))
+
+        switch (property) {
+            case "selectionEnabled":
+                // disable controls when selecting
+                controls.enabled = !state.selectionEnabled
+                if (state.selectionEnabled === false)
+                    // clear `selectionBox` when `selectionEnabled` is disabled
+                    state.selectionBox = undefined
+                break
+
+            case "selectionBox":
+                // update selection polygon on changes to `selectionBox`
+                const polygon = document.getElementById("selection-box")!
+                if (state.selectionBox === undefined) polygon.removeAttribute("points")
+                else polygon.setAttribute("points",
+                    rectangleFromTwoPoints(...state.selectionBox)
+                        .map(v => `${v.x}, ${v.y}`)
+                        .join(" "))
+                break
+
+            case "selectedList":
+                // remove old selection
+                const previous = scene.getObjectByName("selectedPoints")
+                if (previous) scene.remove(previous)
+
+                // update selected points to be white in color
+                const selectedGeometry = new THREE.BufferGeometry()
+                selectedGeometry.setFromPoints(state.selectedList.map(v => v.xyz))
+                const selectedMaterial = new THREE.PointsMaterial({ size: LARGE_POINT, color: SELECTED_COLOR })
+                const selectedPoints = new THREE.Points(selectedGeometry, selectedMaterial)
+                selectedPoints.name = "selectedPoints"
+
+                // add to scene
+                scene.add(selectedPoints)
+                showPointsInImage(state.selectedList, state.blendMultiply ? "multiply" : "source-over")
+                break
+
+            case "blendMultiply":
+                showPointsInImage(state.selectedList, state.blendMultiply ? "multiply" : "source-over")
+                break
         }
 
-        else if (p === "selectionBox") {
-            // update selection polygon on changes to `selectionBox`
-            const polygon = document.getElementById("selection-box")!
-            if (value === undefined) polygon.removeAttribute("points")
-            else polygon.setAttribute("points",
-                rectangleFromTwoPoints(...(value as [THREE.Vector2, THREE.Vector2]))
-                    .map(v => `${v.x}, ${v.y}`)
-                    .join(" "))
-        }
-
-        else if (p === "selectedList") {
-            const selectedList = value as VectorRGBXY[]
-
-            // remove old selection
-            const previous = scene.getObjectByName("selectedPoints")
-            if (previous) scene.remove(previous)
-
-            // update selected points to be white in color
-            const selectedGeometry = new THREE.BufferGeometry()
-            selectedGeometry.setFromPoints(selectedList.map(v => v.xyz))
-            const selectedMaterial = new THREE.PointsMaterial({ size: LARGE_POINT, color: SELECTED_COLOR })
-            const selectedPoints = new THREE.Points(selectedGeometry, selectedMaterial)
-            selectedPoints.name = "selectedPoints"
-
-            // add to scene
-            scene.add(selectedPoints)
-            showPointsInImage(selectedList, state.blendMultiply ? "multiply" : "source-over")
-        }
-
-        else if (p === "blendMultiply") {
-            const blendMultiply = value as boolean
-            showPointsInImage(state.selectedList, blendMultiply ? "multiply" : "source-over")
-        }
-
-        // pass state change through
-        return Reflect.set(target, p, value, receiver)
+        // should almost always be true
+        return result
     }
 })
 
