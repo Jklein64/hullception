@@ -1,8 +1,9 @@
 import * as THREE from "three"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
 
-import { CUBE_SIDE, PARTICLES, SMALL_POINT } from "./constants"
 import VectorRGBXY from "./VectorRGBXY"
+import { pointCloud } from "./pointCloud"
+import { CUBE_SIDE, PARTICLES } from "./constants"
 
 // position canvas
 const canvas = document.createElement("canvas")
@@ -39,7 +40,7 @@ const data = new Array(PARTICLES).fill(undefined).map(() =>
 // add to scene
 export const scene = new THREE.Scene()
 scene.add(camera)
-setPointCloud(data)
+pointCloud.set(data)
 
 // create axes
 new Array(
@@ -82,43 +83,4 @@ window.addEventListener("resize", () => {
     controls.handleResize()
     renderer.render(scene, camera)
 })
-
-// TODO find a better way to expose this
-let pointCloud: VectorRGBXY[] | undefined
-
-/**
- * Given an array of positions and an array `colors` which has three [0, 1] floats
- * for each position in positions (but flattened), creates a new `THREE.Points`
- * object and adds it to the scene.
- */
-export function setPointCloud(data: VectorRGBXY[]) {
-    pointCloud = data
-
-    // remove previous point cloud if it exists
-    const previous = scene.getObjectByName("pointsObject")
-    if (previous) scene.remove(previous)
-
-    // convert from RGBXY to positions and colors
-    const positions: THREE.Vector3[] = []
-    const colors: number[] = []
-    for (const { rgb } of data) {
-        positions.push(new THREE.Vector3(...rgb.toArray()).multiplyScalar(CUBE_SIDE).subScalar(CUBE_SIDE / 2))
-        colors.push(...rgb.toArray())
-    }
-
-    // create object
-    const pointsGeometry = new THREE.BufferGeometry().setFromPoints(positions)
-    pointsGeometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3))
-    const pointsMaterial = new THREE.PointsMaterial({ size: SMALL_POINT, vertexColors: true })
-    const pointsObject = new THREE.Points(pointsGeometry, pointsMaterial)
-    pointsObject.name = "pointsObject"
-
-    // add to scene
-    scene.add(pointsObject)
-}
-
-export function getPointCloud() {
-    // this cast is valid since pointCloud is set earlier in this file
-    return pointCloud as VectorRGBXY[]
-}
 

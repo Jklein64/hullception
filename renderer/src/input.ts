@@ -1,9 +1,10 @@
 import * as THREE from "three"
 
-import { controls, scene, getPointCloud } from "./initialize"
-import { LARGE_POINT, SELECTED_COLOR } from "./constants"
-import { showPointsInImage } from "./image"
 import VectorRGBXY from "./VectorRGBXY"
+import { pointCloud } from "./pointCloud"
+import { showPointsInImage } from "./image"
+import { controls, scene } from "./initialize"
+import { LARGE_POINT, SELECTED_COLOR } from "./constants"
 
 type State = {
     selectionEnabled: boolean,
@@ -124,7 +125,7 @@ function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
     // clear previous selection.
     // TODO maybe add a feature for additive selection, like photoshop?
     const selected: VectorRGBXY[] = []
-    for (const point of getPointCloud()) {
+    for (const point of pointCloud.get()) {
         const { x, y } = toNormalizedDeviceCoordinates(point.xyz)
         if (Math.min(start.x, end.x) <= x && x <= Math.max(start.x, end.x)) // horizontal
             if (Math.min(start.y, end.y) <= y && y <= Math.max(start.y, end.y)) // vertical

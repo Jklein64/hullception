@@ -1,5 +1,5 @@
 import { IMAGE_WIDTH } from "./constants"
-import { setPointCloud } from "./initialize"
+import { pointCloud } from "./pointCloud"
 import VectorRGBXY from "./VectorRGBXY"
 
 let
@@ -50,15 +50,13 @@ document.addEventListener("DOMContentLoaded", () => {
             imageData = newImageData
 
             // add points to scene
-            setPointCloud(data)
+            pointCloud.set(newPointData)
         }
     })
 })
 
-export function showPointsInImage(selected: VectorRGBXY[], blendmode: "source-over" | "multiply" = "source-over") {
-    if (state.imageData && state.pointData && state.context) {
-        const { imageData, context } = state
-
+export async function showPointsInImage(selected: VectorRGBXY[], blendmode: "source-over" | "multiply" = "source-over") {
+    if (imageData) {
         context.clearRect(0, 0, imageData.width, imageData.height)
 
         // reset image if nothing is selected
