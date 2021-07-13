@@ -1,7 +1,6 @@
-import * as THREE from "three"
-
-import { IMAGE_WIDTH, CUBE_SIDE } from "./constants"
+import { IMAGE_WIDTH } from "./constants"
 import { setPointCloud } from "./initialize"
+import VectorRGBXY from "./VectorRGBXY"
 
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.querySelector("#image-form > input")!
@@ -32,21 +31,17 @@ document.addEventListener("DOMContentLoaded", () => {
             context.drawImage(image, ...dimensions)
 
             // get image data and create points
-            const { data } = context.getImageData(...dimensions)
-            const positions: THREE.Vector3[] = []
-            const colors: number[] = []
-            for (let i = 0; i < data.length; i += 4) {
-                const [r, g, b,] = data.slice(i, i + 4)
-                colors.push(r / 255, g / 255, b / 255)
-                positions.push(new THREE.Vector3(
-                    r / 255 * CUBE_SIDE - CUBE_SIDE / 2,
-                    g / 255 * CUBE_SIDE - CUBE_SIDE / 2,
-                    b / 255 * CUBE_SIDE - CUBE_SIDE / 2
-                ))
+            const { data: rgbaFlat } = context.getImageData(...dimensions)
+            const data: VectorRGBXY[] = []
+            for (let i = 0; i < rgbaFlat.length; i += 4) {
+                const [r, g, b,] = rgbaFlat.slice(i, i + 4)
+                const x = (i / 4) % canvas.width
+                const y = Math.trunc((i / 4) / canvas.width)
+                data.push(new VectorRGBXY(r / 255, g / 255, b / 255, x, y))
             }
 
             // add points to scene
-            setPointCloud(positions, colors)
+            setPointCloud(data)
         }
     })
 })

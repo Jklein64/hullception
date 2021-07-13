@@ -1,11 +1,17 @@
 import * as THREE from "three"
 
-export default class {
-    vectorRGB: THREE.Vector3
-    vectorXY: THREE.Vector2
+import { CUBE_SIDE } from "./constants"
+
+export default class VectorRGBXY {
+    rgb: THREE.Color
+    xy: THREE.Vector2
 
     constructor(r: number, g: number, b: number, x: number, y: number) {
-        this.vectorRGB = new THREE.Vector3(r, g, b)
-        this.vectorXY = new THREE.Vector2(x, y)
+        this.rgb = new THREE.Color(r, g, b)
+        this.xy = new THREE.Vector2(x, y)
+    }
+
+    get xyz() {
+        return new THREE.Vector3(...this.rgb.toArray()).multiplyScalar(CUBE_SIDE).subScalar(CUBE_SIDE / 2)
     }
 }

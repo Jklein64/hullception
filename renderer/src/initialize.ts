@@ -33,29 +33,13 @@ controls.rotateSpeed = Math.PI
 controls.target.set(0, 0, 0)
 
 // create particles and material
-const color = new THREE.Color()
-const positions: THREE.Vector3[] = []
-const colors: number[] = []
-// randomly set particles
-for (let i = 0; i < PARTICLES; i++) {
-    // positions
-    const x = Math.random() * CUBE_SIDE - CUBE_SIDE / 2
-    const y = Math.random() * CUBE_SIDE - CUBE_SIDE / 2
-    const z = Math.random() * CUBE_SIDE - CUBE_SIDE / 2
-    positions.push(new THREE.Vector3(x, y, z))
-    // colors
-    const vx = (x / CUBE_SIDE) + 0.5
-    const vy = (y / CUBE_SIDE) + 0.5
-    const vz = (z / CUBE_SIDE) + 0.5
-    color.setRGB(vx, vy, vz)
-    colors.push(color.r, color.g, color.b)
-}
+const data = new Array(PARTICLES).fill(undefined).map(() =>
+    new VectorRGBXY(Math.random(), Math.random(), Math.random(), 0, 0))
 
 // add to scene
 export const scene = new THREE.Scene()
 scene.add(camera)
-setPointCloud(positions, colors)
-// scene.add(points)
+setPointCloud(data)
 
 // create axes
 new Array(
@@ -99,15 +83,28 @@ window.addEventListener("resize", () => {
     renderer.render(scene, camera)
 })
 
+// TODO find a better way to expose this
+let pointCloud: VectorRGBXY[] | undefined
+
 /**
  * Given an array of positions and an array `colors` which has three [0, 1] floats
  * for each position in positions (but flattened), creates a new `THREE.Points`
  * object and adds it to the scene.
  */
-export function setPointCloud(positions: THREE.Vector3[], colors: number[]) {
+export function setPointCloud(data: VectorRGBXY[]) {
+    pointCloud = data
+
     // remove previous point cloud if it exists
     const previous = scene.getObjectByName("pointsObject")
     if (previous) scene.remove(previous)
+
+    // convert from RGBXY to positions and colors
+    const positions: THREE.Vector3[] = []
+    const colors: number[] = []
+    for (const { rgb } of data) {
+        positions.push(new THREE.Vector3(...rgb.toArray()).multiplyScalar(CUBE_SIDE).subScalar(CUBE_SIDE / 2))
+        colors.push(...rgb.toArray())
+    }
 
     // create object
     const pointsGeometry = new THREE.BufferGeometry().setFromPoints(positions)
@@ -121,14 +118,7 @@ export function setPointCloud(positions: THREE.Vector3[], colors: number[]) {
 }
 
 export function getPointCloud() {
-    const pointsObject = scene.getObjectByName("pointsObject") as THREE.Points
-    const pointsFlattened = Array.from(pointsObject.geometry.getAttribute("position").array)
-    const points: THREE.Vector3[] = []
-    for (let i = 0; i < pointsFlattened.length; i += 3) {
-        const [x, y, z] = pointsFlattened.slice(i, i + 3)
-        points.push(new THREE.Vector3(x, y, z))
-    }
-
-    return points
+    // this cast is valid since pointCloud is set earlier in this file
+    return pointCloud as VectorRGBXY[]
 }
 

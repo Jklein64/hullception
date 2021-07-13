@@ -1,12 +1,13 @@
 import * as THREE from "three"
 
 import { controls, scene, getPointCloud } from "./initialize"
-import { LARGE_POINT, SELECTED_COLOR } from "./constants"
+import { LARGE_POINT, SELECTED_COLOR, CUBE_SIDE } from "./constants"
+import VectorRGBXY from "./VectorRGBXY"
 
 type State = {
     selectionEnabled: boolean,
     selectionBox: [THREE.Vector2, THREE.Vector2] | undefined,
-    selectedList: THREE.Vector3[]
+    selectedList: VectorRGBXY[]
 }
 
 const state: State = new Proxy({
@@ -40,11 +41,12 @@ const state: State = new Proxy({
 
             // update selected points to be white in color
             const selectedGeometry = new THREE.BufferGeometry()
-            selectedGeometry.setFromPoints(value as THREE.Vector3[])
+            selectedGeometry.setFromPoints((<VectorRGBXY[]>value).map(v => v.xyz))
             const selectedMaterial = new THREE.PointsMaterial({ size: LARGE_POINT, color: SELECTED_COLOR })
             const selectedPoints = new THREE.Points(selectedGeometry, selectedMaterial)
             selectedPoints.name = "selectedPoints"
 
+            // add to scene
             scene.add(selectedPoints)
         }
 
@@ -95,13 +97,12 @@ function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
     [start, end] = [start, end].map(toNormalizedDeviceCoordinates)
     // clear previous selection.
     // TODO maybe add a feature for additive selection, like photoshop?
-    const selected: THREE.Vector3[] = []
-    for (const position of getPointCloud()) {
-        // NOTE not sure why .clone() is needed here; I would expect Vectors to be immutable
-        const { x, y } = toNormalizedDeviceCoordinates(position.clone())
+    const selected: VectorRGBXY[] = []
+    for (const point of getPointCloud()) {
+        const { x, y } = toNormalizedDeviceCoordinates(point.xyz)
         if (Math.min(start.x, end.x) <= x && x <= Math.max(start.x, end.x)) // horizontal
             if (Math.min(start.y, end.y) <= y && y <= Math.max(start.y, end.y)) // vertical
-                selected.push(position)
+                selected.push(point)
     }
 
     // NOTE must replace reference instead of pushing to trigger Proxy `set()` handler
