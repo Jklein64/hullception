@@ -41,10 +41,13 @@
 
         #image-form * {
             color: white;
+            font-size: 1em;
+            font-family: Arial, Helvetica, sans-serif;
         }
 
-        #image-form input[type="file"] {
-            width: 100%;
+        #image-canvas {
+            border: 1px dashed white;
+            display: none;
         }
     </style>
 </head>
@@ -57,11 +60,12 @@
     </svg>
 
     <form id="image-form">
-        <input type="file">
+        <input style="width: 100%" type="file">
         <section>
-            <input type="checkbox" name="blendmode" id="blendmode">
+            <input type="checkbox" name="blendmode" id="image-blendmode">
             <label for="blendmode">Show actual color</label>
         </section>
+        <canvas id="image-canvas"></canvas>
     </form>
 </body>
 

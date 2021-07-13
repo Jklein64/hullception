@@ -105,7 +105,7 @@ document.addEventListener("pointerup", () => {
 })
 
 window.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("blendmode")!.addEventListener("change", e => {
+    document.getElementById("image-blendmode")!.addEventListener("change", e => {
         // NOTE typescript is being dumb here... it isn't very good at events
         const checked = (<any>e.target).checked as boolean
         state.blendMultiply = checked

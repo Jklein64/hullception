@@ -18,8 +18,7 @@ const state: State = new Proxy({
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.querySelector("#image-form > input")!
 
-    const canvas = document.createElement("canvas")
-    input.parentElement!.append(canvas)
+    const canvas = document.getElementById("image-canvas") as HTMLCanvasElement
 
     const context = canvas.getContext("2d", { alpha: false })!
     state.context = context
@@ -35,6 +34,10 @@ document.addEventListener("DOMContentLoaded", () => {
         image.src = window.URL.createObjectURL(file)
 
         image.onload = () => {
+            // unhide
+            if (canvas.style.display !== "block")
+                canvas.style.display = "block"
+
             // resize
             const { width, height } = image
             canvas.width = IMAGE_WIDTH
@@ -67,6 +70,8 @@ document.addEventListener("DOMContentLoaded", () => {
 export function showPointsInImage(selected: VectorRGBXY[], blendmode: "source-over" | "multiply" = "source-over") {
     if (state.imageData && state.pointData && state.context) {
         const { imageData, context } = state
+
+        context.clearRect(0, 0, imageData.width, imageData.height)
 
         // reset image if nothing is selected
         if (selected.length === 0)
