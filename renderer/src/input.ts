@@ -112,6 +112,10 @@ window.addEventListener("DOMContentLoaded", () => {
     })
 })
 
+/**
+ * Given a selection box, calculates all of the points in `pointCloud` that
+ * should be selected.
+ */
 function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
     [start, end] = [start, end].map(toNormalizedDeviceCoordinates)
     // clear previous selection.
