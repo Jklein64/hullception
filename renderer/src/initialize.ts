@@ -32,7 +32,6 @@ controls.rotateSpeed = Math.PI
 controls.target.set(0, 0, 0)
 
 // create particles and material
-const pointsGeometry = new THREE.BufferGeometry()
 const color = new THREE.Color()
 export const positions: THREE.Vector3[] = []
 const colors: number[] = []
@@ -50,15 +49,12 @@ for (let i = 0; i < PARTICLES; i++) {
     color.setRGB(vx, vy, vz)
     colors.push(color.r, color.g, color.b)
 }
-pointsGeometry.setFromPoints(positions)
-pointsGeometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3))
-const pointsMaterial = new THREE.PointsMaterial({ size: SMALL_POINT, vertexColors: true })
-const points = new THREE.Points(pointsGeometry, pointsMaterial)
 
 // add to scene
 export const scene = new THREE.Scene()
 scene.add(camera)
-scene.add(points)
+createPointCloud(positions, colors)
+// scene.add(points)
 
 // create axes
 new Array(
@@ -101,4 +97,25 @@ window.addEventListener("resize", () => {
     controls.handleResize()
     renderer.render(scene, camera)
 })
+
+/**
+ * Given an array of positions and an array `colors` which has three [0, 1] floats
+ * for each position in positions (but flattened), creates a new `THREE.Points`
+ * object and adds it to the scene.
+ */
+export function createPointCloud(positions: THREE.Vector3[], colors: number[]) {
+    // remove previous point cloud if it exists
+    const previous = scene.getObjectByName("pointsObject")
+    if (previous) scene.remove(previous)
+
+    // create object
+    const pointsGeometry = new THREE.BufferGeometry().setFromPoints(positions)
+    pointsGeometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3))
+    const pointsMaterial = new THREE.PointsMaterial({ size: SMALL_POINT, vertexColors: true })
+    const pointsObject = new THREE.Points(pointsGeometry, pointsMaterial)
+    pointsObject.name = "pointsObject"
+
+    // add to scene
+    scene.add(pointsObject)
+}
 
