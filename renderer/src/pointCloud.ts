@@ -19,9 +19,11 @@ export const pointCloud: Omit<PointCloud, "value"> = Object.defineProperty({
     set(data) {
         (this as PointCloud).value = data
 
-        // remove previous point cloud if it exists
-        const previous = scene.getObjectByName("pointsObject")
-        if (previous) scene.remove(previous)
+        // remove previous point cloud and convex hull if they exist
+        const previousPointCloud = scene.getObjectByName("pointsObject")
+        if (previousPointCloud) scene.remove(previousPointCloud)
+        const previousConvexHull = scene.getObjectByName("convexHull")
+        if (previousConvexHull) scene.remove(previousConvexHull)
 
         // convert from RGBXY to positions and colors
         const positions: THREE.Vector3[] = []
