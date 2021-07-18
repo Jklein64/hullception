@@ -1,6 +1,7 @@
 # %%
 import matplotlib.pyplot as plot
 from IPython.display import clear_output
+import export
 
 # %%
 # import deps
@@ -11,8 +12,16 @@ import numpy as np
 
 # %%
 # open image and save into `points`
-with PIL.Image.open("turquoise.png") as image:
+import requests
+with PIL.Image.open(requests.get("https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/1200px-Image_created_with_a_mobile_phone.png", stream=True).raw) as image:
+    # remove alpha
+    image = image.convert("RGB")
+
+    # display image in viewer
+    export.send_image(image)
+
     points = np.array(image)/255  # [0, 255] -> [0, 1]
+    print(np.shape(points))
     w, h = points.shape[:2]
     points = points.reshape((w*h, 3))  # [x][y][rgb] -> [i][rgb]
     # remove colors made identical with above dimension drop
@@ -68,6 +77,7 @@ def prep(axes):
     axes.set_zlim3d(0, 1)
 
 
+# %%
 # No Manipulation
 figure = plot.figure()
 axes = figure.add_subplot(111, projection="3d")
@@ -78,19 +88,23 @@ axes.scatter(
     c=np.array([labels/(K-1)]*3).T,
     s=1)
 
+vertices = np.reshape(points[starting_hull.simplices], (-1, 3))
+export.send_lines(vertices)
+
 for simplex in starting_hull.simplices:
+    # NOTE simplex contains the indices of the points that form the triangular faces of the hull.  We wrap the end to the beginning and then connect them using four lines.  `points[simplex, n]` will get the four coordinates along the n'th axes (x=0, y=1, z=2).
     simplex = np.append(simplex, simplex[0])
-    axes.plot(
-        points[simplex, 0],
-        points[simplex, 1],
-        points[simplex, 2],
-        "r-")
+    x = points[simplex, 0]
+    y = points[simplex, 1]
+    z = points[simplex, 2]
+    axes.plot(x, y, z, "r-")
 
 prep(axes)
 
-plot.savefig("out/before.png", transparent=False, dpi=300)
+# plot.savefig("out/before.png", transparent=False, dpi=300)
+"""
 plot.show()
-
+# %%
 # With Manipulation
 figure = plot.figure()
 axes = figure.add_subplot(111, projection="3d")
@@ -134,3 +148,4 @@ plot.show()
 
 # %% [markdown]
 # newer method
+"""
