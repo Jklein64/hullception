@@ -13,6 +13,7 @@ def send_points(data: np.ndarray):
 
 def send_lines(data: np.ndarray):
     """ Given an array of size-3 arrays (representing vertices), send this data, formatted, to the javascript server.  For every group of three vertices, drawing lines from 1->2, 2->3, and 3->1 will create one of the faces of the convex hull. """
+    # NOTE look into this maybe? https://stackoverflow.com/questions/49098466/plot-3d-convex-closed-regions-in-matplot-lib/49115448
     import json
 
     send("lines", json.dumps(data.tolist()))
