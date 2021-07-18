@@ -3,6 +3,7 @@
         "strictNullChecks": true,
         "strict": true,
         "target": "ES6",
-        "lib": ["ES2019", "DOM"]
+        "lib": ["ES2019", "DOM"],
+        "moduleResolution": "node"
     },
 }

@@ -4,7 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "dev": "parcel src/index.html"
+        "dev": "parcel src/index.html",
+        "build": "parcel build src/index.html"
     },
     "keywords": [],
     "author": "",
@@ -15,7 +16,10 @@
         "typescript": "github:microsoft/TypeScript"
     },
     "dependencies": {
-        "three": "^0.130.1"
+        "@types/express": "^4.17.13",
+        "express": "^4.17.1",
+        "three": "^0.130.1",
+        "ts-node": "^10.1.0"
     },
     "browserslist": [
         "last 3 Chrome versions"
