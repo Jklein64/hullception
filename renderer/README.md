@@ -1,6 +1,6 @@
 # About
 
-This is a special image viewer built using [three.js](https://threejs.org/) and [typescript](https://www.typescriptlang.org/) (and using the [parcel](https://parceljs.org/) dev server). Given an image, the viewer will plot each unique RGB color as a single point in RGB space inside of an interactive cube.
+This is a special image viewer built using [three.js](https://threejs.org/), [typescript](https://www.typescriptlang.org/), and [expressjs](https://expressjs.com/) (and using the [parcel](https://parceljs.org/) dev server). Given an image, the viewer will plot each unique RGB color as a single point in RGB space inside of an interactive cube.
 
 Holding <kbd>Shift</kbd> and clicking and dragging with the mouse allows for the selection of individual points. When there is a selection, the image will only show the selected pixels (with the option to show them as white or as their actual color). Pressing <kbd>Enter</kbd> will reset the camera view to its initial state, looking at the cube from white.
 
