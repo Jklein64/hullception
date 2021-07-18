@@ -10,10 +10,19 @@ This viewer hopes to bridge the gap between the image and its point-cloud repres
 
 1. Clone the repository and run `npm install` in the root directory
 1. Run `npm run build` and navigate to `localhost:8000/`
-1. Upload an image by either pressing the `Choose File` button or by sending a base64 encoded image in the body of a `POST` request to `localhost:8000/image`. The request may look like this, for example:
+
+-   Upload an image by either pressing the `Choose File` button or by sending a base64 encoded image in the body of a `POST` request to `localhost:8000/image`. The request may look like this, for example (in bash):
 
     ```sh
     echo -n $(base64 ./image.jpeg) | curl -d @- http://localhost:8000/image
+    ```
+
+-   Display a precalculated convex hull by sending an array of the vertices of the simplices, such that for every group of three vertices, drawing lines from 1 to 2, 2 to 3, and 3 to 1 will create one of the faces of the convex hull, in the body of a `POST` request to `localhost:8000/lines`. The request may look like this, for example (in python):
+
+    ```python
+    import requests, json
+    # data is an np.ndarray with shape (-1, 3)
+    response = requests.post(f"localhost:8000/lines", json.dumps(data.tolist()))
     ```
 
 # Development
