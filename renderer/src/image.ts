@@ -4,12 +4,13 @@ import VectorRGBXY from "./VectorRGBXY"
 
 let
     context: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
     imageData: ImageData
 
 document.addEventListener("DOMContentLoaded", () => {
     // grab elements
     const input = document.querySelector("#image-form > input") as HTMLInputElement
-    const canvas = document.getElementById("image-canvas") as HTMLCanvasElement
+    canvas = document.getElementById("image-canvas") as HTMLCanvasElement
     context = canvas.getContext("2d", { alpha: false })!
 
     input.addEventListener("change", e => {
@@ -18,42 +19,46 @@ document.addEventListener("DOMContentLoaded", () => {
         const file = target.files?.item(0)
         if (!file) throw new Error("Could not find image.")
 
-        // create image element from blob
-        const image = document.createElement("img")
-        image.src = window.URL.createObjectURL(file)
-
-        image.onload = () => {
-            // unhide
-            if (canvas.style.display !== "block")
-                canvas.style.display = "block"
-
-            // resize
-            const { width, height } = image
-            canvas.width = IMAGE_WIDTH
-            canvas.height = IMAGE_WIDTH * height / width
-
-            // draw to canvas
-            const dimensions: [number, number, number, number] = [0, 0, canvas.width, canvas.height]
-            context.drawImage(image, ...dimensions)
-
-            // get image data and create points
-            const newImageData = context.getImageData(...dimensions)
-            const newPointData: VectorRGBXY[] = []
-            for (let i = 0; i < newImageData.data.length; i += 4) {
-                const [r, g, b,] = newImageData.data.slice(i, i + 4)
-                const x = (i / 4) % canvas.width
-                const y = Math.trunc((i / 4) / canvas.width)
-                newPointData.push(new VectorRGBXY(r / 255, g / 255, b / 255, x, y))
-            }
-
-            // update state
-            imageData = newImageData
-
-            // add points to scene
-            pointCloud.set(newPointData)
-        }
+        setImage(file)
     })
 })
+
+export function setImage(raw: Blob | File) {
+    // create image element from blob
+    const image = document.createElement("img")
+    image.src = window.URL.createObjectURL(raw)
+
+    image.onload = () => {
+        // unhide
+        if (canvas.style.display !== "block")
+            canvas.style.display = "block"
+
+        // resize
+        const { width, height } = image
+        canvas.width = IMAGE_WIDTH
+        canvas.height = IMAGE_WIDTH * height / width
+
+        // draw to canvas
+        const dimensions: [number, number, number, number] = [0, 0, canvas.width, canvas.height]
+        context.drawImage(image, ...dimensions)
+
+        // get image data and create points
+        const newImageData = context.getImageData(...dimensions)
+        const newPointData: VectorRGBXY[] = []
+        for (let i = 0; i < newImageData.data.length; i += 4) {
+            const [r, g, b,] = newImageData.data.slice(i, i + 4)
+            const x = (i / 4) % canvas.width
+            const y = Math.trunc((i / 4) / canvas.width)
+            newPointData.push(new VectorRGBXY(r / 255, g / 255, b / 255, x, y))
+        }
+
+        // update state
+        imageData = newImageData
+
+        // add points to scene
+        pointCloud.set(newPointData)
+    }
+}
 
 export async function showPointsInImage(selected: VectorRGBXY[], blendmode: "source-over" | "multiply" = "source-over") {
     if (imageData) {
