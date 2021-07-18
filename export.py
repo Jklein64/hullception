@@ -5,6 +5,12 @@ import PIL.Image
 import requests
 
 
+def send_points(data: np.ndarray):
+    """ Given an array of points (and possibly a color), send them to the javascript server to be displayed.  This could be used, for example, to highlight which points are up for removal. """
+    # TODO
+    ...
+
+
 def send_lines(data: np.ndarray):
     """ Given an array of size-3 arrays (representing vertices), send this data, formatted, to the javascript server.  For every group of three vertices, drawing lines from 1->2, 2->3, and 3->1 will create one of the faces of the convex hull. """
     import json
