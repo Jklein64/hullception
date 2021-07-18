@@ -8,3 +8,6 @@ out/*
 node_modules
 .cache
 dist
+videos
+videos/
+__pycache__
