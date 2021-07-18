@@ -9,4 +9,14 @@ This viewer hopes to bridge the gap between the image and its point-cloud repres
 # Usage
 
 1. Clone the repository and run `npm install` in the root directory
-1. Run `npm run dev` and navigate to `localhost:1234`
+1. Run `npm run build` and navigate to `localhost:8000/`
+1. Upload an image by either pressing the `Choose File` button or by sending a base64 encoded image in the body of a `POST` request to `localhost:8000/image`. The request may look like this, for example:
+
+    ```sh
+    echo -n $(base64 ./image.jpeg) | curl -d @- http://localhost:8000/image
+    ```
+
+# Development
+
+1. Clone the repository and run `npm install` in the root directory
+1. Run `npm run dev` and navigate to `localhost:1234` (not `8000`!). Changes to any of the files within `src/` will be reloaded automatically. Follow the usage instructions for development on the server (no automatic reloading).
