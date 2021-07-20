@@ -29,7 +29,7 @@ camera.name = "camera"
 // set up orbit controls
 export const controls = new TrackballControls(camera, renderer.domElement)
 controls.noPan = true
-controls.noZoom = true
+// controls.noZoom = true
 controls.rotateSpeed = Math.PI
 controls.target.set(0, 0, 0)
 
