@@ -9,7 +9,7 @@ import { LARGE_POINT, SELECTED_COLOR } from "./constants"
 type State = {
     selectionEnabled: boolean,
     selectionMode: "new" | "add" | "subtract",
-    selectionPath: SelectionPath | undefined,
+    selectionPath: THREE.Vector2[] | undefined,
     selectedList: VectorRGBXY[],
     blendMultiply: boolean
 }
@@ -31,7 +31,7 @@ export const state: State = new Proxy({
                 // disable controls when selecting
                 controls.enabled = !state.selectionEnabled
                 if (state.selectionEnabled === false)
-                    // clear `selectionBox` when `selectionEnabled` is disabled
+                    // clear `selectionPath` when `selectionEnabled` is disabled
                     state.selectionPath = undefined
                 break
 
@@ -43,15 +43,13 @@ export const state: State = new Proxy({
                 break
 
             case "selectionPath":
-                // update selection polygon on changes to `selectionBox`
-                const polygon = document.getElementById("selection-box")!
-                if (state.selectionPath === undefined) {
-                    polygon.removeAttribute("points")
-                } else {
-                    const path: THREE.Vector2[] = []
-                    for (let node = state.selectionPath; node !== undefined; node = node.next!)
-                        path.push(node.position)
-                    polygon.setAttribute("points", path.map(v => `${v.x}, ${v.y}`).join(" "))
+                // update selection polygon on changes to `selectionPath`
+                const polygon = document.getElementById("selection-box")
+                if (polygon) {
+                    if (state.selectionPath === undefined)
+                        polygon.removeAttribute("points")
+                    else
+                        polygon.setAttribute("points", state.selectionPath.map(v => `${v.x}, ${v.y}`).join(" "))
                 }
                 break
 
@@ -95,26 +93,20 @@ window.addEventListener("keydown", ({ key }) => {
 window.addEventListener("keyup", ({ key }) => {
     if (key === "Shift") {
         if (state.selectionPath)
-            handleSelection()
+            handleSelection(state.selectionPath)
         state.selectionEnabled = false
     }
 })
 
 document.addEventListener("pointerdown", ({ clientX, clientY }) => {
     if (state.selectionEnabled) {
-        state.selectionPath = {
-            position: new THREE.Vector2(clientX, clientY),
-            next: undefined
-        }
+        state.selectionPath = [new THREE.Vector2(clientX, clientY)]
     }
 })
 
 document.addEventListener("pointermove", ({ clientX, clientY }) => {
     if (state.selectionEnabled && state.selectionPath) {
-        state.selectionPath = {
-            position: new THREE.Vector2(clientX, clientY),
-            next: state.selectionPath
-        }
+        state.selectionPath = [new THREE.Vector2(clientX, clientY), ...state.selectionPath]
         // state.selectionPath = rectangleFromTwoPoints(start.position, new THREE.Vector2(clientX, clientY))
         //     .reduce((path, curr) => ({ position: curr, next: path }), start)
     }
@@ -122,7 +114,7 @@ document.addEventListener("pointermove", ({ clientX, clientY }) => {
 
 document.addEventListener("pointerup", () => {
     if (state.selectionEnabled && state.selectionPath) {
-        handleSelection()
+        handleSelection(state.selectionPath)
         state.selectionPath = undefined
     }
 })
@@ -141,65 +133,36 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 /**
- * Given a selection box, calculates all of the points in `pointCloud` that should be selected.  This is calculated using the point-in-polygon algorithm from https://towardsdatascience.com/is-the-point-inside-the-polygon-574b86472119 - "For any polygon, find all the edges of the polygon that cut through the line passing through f(x) = query point.y. For these edges check if the query point is on the left or right side of the edge when looking at all the edges in anticlockwise direction. Increase the value of winding number (wn) by one if query point is on the left side of an upward crossing and decrease the wn by one if query point is on the right side of an downward crossing. If the final winding number is non zero then the point lies inside the polygon."
+ * Calculates all of the points in `pointCloud` that should be selected based on the given list of vertices of the selection lasso (typically taken from `state.selectionPath`).  Updates `state.selectedList`.
  */
-function handleSelection() {
-    const pathPositions: THREE.Vector2[] = []
-    for (let node = state.selectionPath; node !== undefined; node = node.next!)
-        pathPositions.push(toNormalizedDeviceCoordinates(node.position))
-
-    // include starting point at the end to wrap around
-    const pathDisplacements = pathPositions.map((position, i) => ({
-        from: position, to: pathPositions[i + 1] ?? pathPositions[0]
-    }))
-
+function handleSelection(vertices: THREE.Vector2[]) {
+    vertices = vertices.map(toNormalizedDeviceCoordinates)
     const selected: VectorRGBXY[] = []
-    for (const point of pointCloud.get().slice(0, 1)) {
+    for (const point of pointCloud.get()) {
         const { x, y } = toNormalizedDeviceCoordinates(point.xyz)
-        const relevantEdges = pathDisplacements.filter(({ from, to }) =>
-            Math.sign(from.x + x) === -Math.sign(to.x + x))
-        // let left and right be defined as if we were standing at an edge's `from` position and looking at its `to` position.  Increment `windingNumber` when the point is on the left and the edge's net y component is positive.  Decrement when negative.
-        let windingNumber = 0
-        relevantEdges.forEach(({ from, to }, i) => {
-            // see https://stackoverflow.com/questions/1560492/how-to-tell-whether-a-point-is-to-the-right-or-left-side-of-a-line
-            const left = ((to.x - from.x) * (y - to.y) - (to.y - from.y) * (x - to.x)) > 0
-            console.log(`is edge ${i} to the left? ${left}`)
-            const vertical = to.x - from.x
-            console.log(`is edge ${i} pointing up? ${vertical > 0}`)
-            windingNumber += left ? ((vertical > 0) ? 1 : -1) : 0
-        })
-        console.log(`winding number is ${windingNumber}`)
-        // if (windingNumber !== 0)
-        selected.push(point)
-        //     if (Math.min(start.x, end.x) <= x && x <= Math.max(start.x, end.x)) // horizontal
-        //         if (Math.min(start.y, end.y) <= y && y <= Math.max(start.y, end.y)) // vertical
-        //             selected.push(point)
+        // adapted from https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html#Almost%20Convex%20Polygons
+        let included = false
+        // j = i-1 but wraps around back at the beginning
+        for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++)
+            if (vertices[i].y > y !== vertices[j].y > y)
+                if (x < (vertices[j].x - vertices[i].x) * (y - vertices[i].y)
+                    / (vertices[j].y - vertices[i].y) + vertices[i].x)
+                    included = !included
+        if (included) selected.push(point)
     }
+
 
     // NOTE must replace reference instead of pushing to trigger Proxy `set()` handler
     // this is where the selectionMode magic happens
     switch (state.selectionMode) {
-        case "new": return void (state.selectedList = selected)
-        case "add": return void (state.selectedList = [...state.selectedList, ...selected])
+        case "new":
+            return void (state.selectedList = selected)
+        case "add":
+            return void (state.selectedList = [...state.selectedList, ...selected])
         case "subtract":
             return void (state.selectedList = state.selectedList.filter(inV =>
                 selected.every(outV => !outV.equals(inV))))
     }
-}
-
-/**
- * Given opposing corners, returns exactly four points that, when connected with lines,
- * will create a rectangle whose edges are parallel to either the x or y axis.
- * Note that the `start` and `end` points can be in any order (which is why this
- * function doesn't accept a width and a height since those cannot be negative).
- */
-function rectangleFromTwoPoints(start: THREE.Vector2, end: THREE.Vector2) {
-    return [
-        new THREE.Vector2(start.x, start.y),
-        new THREE.Vector2(start.x, end.y),
-        new THREE.Vector2(end.x, end.y),
-        new THREE.Vector2(end.x, start.y),
-    ]
 }
 
 /**
@@ -217,9 +180,4 @@ function toNormalizedDeviceCoordinates(vector: THREE.Vector3 | THREE.Vector2) {
         return new THREE.Vector2(
             (vector.x / window.innerWidth) * 2 - 1,
             -1 * ((vector.y / window.innerHeight) * 2 - 1))
-}
-
-interface SelectionPath {
-    position: THREE.Vector2
-    next: SelectionPath | undefined
 }
