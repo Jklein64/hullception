@@ -1,9 +1,20 @@
 import * as THREE from "three"
 
 import { setImage } from "./image"
-import { ServerSentEvent } from "./constants"
 import { scene } from "./initialize"
 import { CUBE_SIDE } from "./constants"
+
+export type ServerSentEvent = {
+    type: "image"
+    data: string // base64 encoded image
+} | {
+    type: "lines"
+    data: Array<[
+        x: number,
+        y: number,
+        z: number
+    ]> // connect even indices to odd indices (but not the other way)
+}
 
 const source = new EventSource("/image")
 source.addEventListener("message", ({ data }) => {
@@ -18,6 +29,8 @@ source.addEventListener("message", ({ data }) => {
 
         case "lines":
             const lines = new THREE.Group()
+
+            // NOTE lines are cleared when pointCloud is cleared
             lines.name = "lines"
 
             for (let i = 0; i < body.data.length; i += 2) {

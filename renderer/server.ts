@@ -1,10 +1,10 @@
 import * as express from "express"
 import * as cors from "cors"
+import * as events from "events"
 
-import * as SSE from "./src/constants";
+import * as SSE from "./src/SSE"
 
-const image = State<SSE.ImageData["data"]>("")
-const lines = State<SSE.LinesData["data"]>([])
+const emitter = new events.EventEmitter()
 
 express()
     .use(cors())
@@ -17,25 +17,13 @@ express()
         res.flushHeaders()
 
         // keep client in sync with server
-        const
-            imageCallback = (image: string) => {
-                const payload: SSE.ServerSentEvent = { type: "image", data: image }
-                res.write(`data: ${JSON.stringify(payload)}\n\n`)
-            },
-            linesCallback = (lines: SSE.LinesData["data"]) => {
-                const payload: SSE.ServerSentEvent = { type: "lines", data: lines }
-                res.write(`data: ${JSON.stringify(payload)}\n\n`)
-            }
-        image.subscribers.add(imageCallback)
-        lines.subscribers.add(linesCallback)
-
-
+        emitter.on("post", ({ type, data }: SSE.ServerSentEvent) => {
+            res.write(`data: ${JSON.stringify({ type, data })}\n\n`)
+        })
 
         // client can terminate connection
         res.on("close", () => {
-            // Set can delete by reference :)
-            image.subscribers.delete(imageCallback)
-            lines.subscribers.delete(linesCallback)
+            emitter.removeAllListeners("post")
             res.end()
         })
     })
@@ -44,35 +32,23 @@ express()
 
     .get("/", (req, res) => res.sendFile("index.html"))
 
-    .post("/image", (req, res) => {
-        let collected = ""
-        req.on("data", chunk => collected += chunk)
-        req.on("end", () => {
-            image.value = collected
-            res.status(200).send()
-        })
-    })
+    .post("/:endpoint", (req, res) => {
+        const endpoint = req.params.endpoint
 
-    .post("/lines", (req, res) => {
         let collected = ""
         req.on("data", chunk => collected += chunk)
         req.on("end", () => {
-            lines.value = JSON.parse(collected)
+            emitter.emit("post", { type: endpoint, data: primitiveOrJSON(collected) })
             res.status(200).send()
         })
     })
 
     .listen(process.env.PORT ?? 8000, () => console.log("listening!"))
 
-function State<T>(initial: T) {
-    return new Proxy({
-        value: initial,
-        subscribers: new Set<(value: T) => void>()
-    }, {
-        set(target, property, value: unknown, receiver) {
-            if (property === "value")
-                target.subscribers.forEach(s => s(value as T))
-            return Reflect.set(target, property, value, receiver)
-        }
-    })
+function primitiveOrJSON(data: string): string | number | Object {
+    try {
+        return JSON.parse(data)
+    } catch {
+        return data
+    }
 }
