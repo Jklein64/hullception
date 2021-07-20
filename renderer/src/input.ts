@@ -9,7 +9,7 @@ import { LARGE_POINT, SELECTED_COLOR } from "./constants"
 type State = {
     selectionEnabled: boolean,
     selectionMode: "new" | "add" | "subtract",
-    selectionBox: [THREE.Vector2, THREE.Vector2] | undefined,
+    selectionPath: SelectionPath | undefined,
     selectedList: VectorRGBXY[],
     blendMultiply: boolean
 }
@@ -17,7 +17,7 @@ type State = {
 const state: State = new Proxy({
     selectionEnabled: false,
     selectionMode: "new",
-    selectionBox: undefined,
+    selectionPath: undefined,
     selectedList: [],
     blendMultiply: false
 }, {
@@ -32,7 +32,7 @@ const state: State = new Proxy({
                 controls.enabled = !state.selectionEnabled
                 if (state.selectionEnabled === false)
                     // clear `selectionBox` when `selectionEnabled` is disabled
-                    state.selectionBox = undefined
+                    state.selectionPath = undefined
                 break
 
             case "selectionMode":
@@ -42,14 +42,17 @@ const state: State = new Proxy({
                 active.setAttribute("disabled", "")
                 break
 
-            case "selectionBox":
+            case "selectionPath":
                 // update selection polygon on changes to `selectionBox`
                 const polygon = document.getElementById("selection-box")!
-                if (state.selectionBox === undefined) polygon.removeAttribute("points")
-                else polygon.setAttribute("points",
-                    rectangleFromTwoPoints(...state.selectionBox)
-                        .map(v => `${v.x}, ${v.y}`)
-                        .join(" "))
+                if (state.selectionPath === undefined) {
+                    polygon.removeAttribute("points")
+                } else {
+                    const path: THREE.Vector2[] = []
+                    for (let node = state.selectionPath; node !== undefined; node = node.next!)
+                        path.push(node.position)
+                    polygon.setAttribute("points", path.map(v => `${v.x}, ${v.y}`).join(" "))
+                }
                 break
 
             case "selectedList":
@@ -91,29 +94,36 @@ window.addEventListener("keydown", ({ key }) => {
 
 window.addEventListener("keyup", ({ key }) => {
     if (key === "Shift") {
-        if (state.selectionBox)
-            handleSelection(state.selectionBox)
+        if (state.selectionPath)
+            handleSelection()
         state.selectionEnabled = false
     }
 })
 
 document.addEventListener("pointerdown", ({ clientX, clientY }) => {
     if (state.selectionEnabled) {
-        state.selectionBox = [new THREE.Vector2(clientX, clientY), new THREE.Vector2(clientX, clientY)]
+        state.selectionPath = {
+            position: new THREE.Vector2(clientX, clientY),
+            next: undefined
+        }
     }
 })
 
 document.addEventListener("pointermove", ({ clientX, clientY }) => {
-    if (state.selectionEnabled && state.selectionBox) {
-        const [start, _] = state.selectionBox
-        state.selectionBox = [start, new THREE.Vector2(clientX, clientY)]
+    if (state.selectionEnabled && state.selectionPath) {
+        state.selectionPath = {
+            position: new THREE.Vector2(clientX, clientY),
+            next: state.selectionPath
+        }
+        // state.selectionPath = rectangleFromTwoPoints(start.position, new THREE.Vector2(clientX, clientY))
+        //     .reduce((path, curr) => ({ position: curr, next: path }), start)
     }
 })
 
 document.addEventListener("pointerup", () => {
-    if (state.selectionEnabled && state.selectionBox) {
-        handleSelection(state.selectionBox)
-        state.selectionBox = undefined
+    if (state.selectionEnabled && state.selectionPath) {
+        handleSelection()
+        state.selectionPath = undefined
     }
 })
 
@@ -131,21 +141,43 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 /**
- * Given a selection box, calculates all of the points in `pointCloud` that
- * should be selected.
+ * Given a selection box, calculates all of the points in `pointCloud` that should be selected.  This is calculated using the point-in-polygon algorithm from https://towardsdatascience.com/is-the-point-inside-the-polygon-574b86472119 - "For any polygon, find all the edges of the polygon that cut through the line passing through f(x) = query point.y. For these edges check if the query point is on the left or right side of the edge when looking at all the edges in anticlockwise direction. Increase the value of winding number (wn) by one if query point is on the left side of an upward crossing and decrease the wn by one if query point is on the right side of an downward crossing. If the final winding number is non zero then the point lies inside the polygon."
  */
-function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
-    [start, end] = [start, end].map(toNormalizedDeviceCoordinates)
-    // clear previous selection.
+function handleSelection() {
+    const pathPositions: THREE.Vector2[] = []
+    for (let node = state.selectionPath; node !== undefined; node = node.next!)
+        pathPositions.push(toNormalizedDeviceCoordinates(node.position))
+
+    // include starting point at the end to wrap around
+    const pathDisplacements = pathPositions.map((position, i) => ({
+        from: position, to: pathPositions[i + 1] ?? pathPositions[0]
+    }))
+
     const selected: VectorRGBXY[] = []
-    for (const point of pointCloud.get()) {
+    for (const point of pointCloud.get().slice(0, 1)) {
         const { x, y } = toNormalizedDeviceCoordinates(point.xyz)
-        if (Math.min(start.x, end.x) <= x && x <= Math.max(start.x, end.x)) // horizontal
-            if (Math.min(start.y, end.y) <= y && y <= Math.max(start.y, end.y)) // vertical
-                selected.push(point)
+        const relevantEdges = pathDisplacements.filter(({ from, to }) =>
+            Math.sign(from.x + x) === -Math.sign(to.x + x))
+        // let left and right be defined as if we were standing at an edge's `from` position and looking at its `to` position.  Increment `windingNumber` when the point is on the left and the edge's net y component is positive.  Decrement when negative.
+        let windingNumber = 0
+        relevantEdges.forEach(({ from, to }, i) => {
+            // see https://stackoverflow.com/questions/1560492/how-to-tell-whether-a-point-is-to-the-right-or-left-side-of-a-line
+            const left = ((to.x - from.x) * (y - to.y) - (to.y - from.y) * (x - to.x)) > 0
+            console.log(`is edge ${i} to the left? ${left}`)
+            const vertical = to.x - from.x
+            console.log(`is edge ${i} pointing up? ${vertical > 0}`)
+            windingNumber += left ? ((vertical > 0) ? 1 : -1) : 0
+        })
+        console.log(`winding number is ${windingNumber}`)
+        // if (windingNumber !== 0)
+        selected.push(point)
+        //     if (Math.min(start.x, end.x) <= x && x <= Math.max(start.x, end.x)) // horizontal
+        //         if (Math.min(start.y, end.y) <= y && y <= Math.max(start.y, end.y)) // vertical
+        //             selected.push(point)
     }
 
     // NOTE must replace reference instead of pushing to trigger Proxy `set()` handler
+    // this is where the selectionMode magic happens
     switch (state.selectionMode) {
         case "new": return void (state.selectedList = selected)
         case "add": return void (state.selectedList = [...state.selectedList, ...selected])
@@ -185,4 +217,9 @@ function toNormalizedDeviceCoordinates(vector: THREE.Vector3 | THREE.Vector2) {
         return new THREE.Vector2(
             (vector.x / window.innerWidth) * 2 - 1,
             -1 * ((vector.y / window.innerHeight) * 2 - 1))
+}
+
+interface SelectionPath {
+    position: THREE.Vector2
+    next: SelectionPath | undefined
 }
