@@ -41,10 +41,20 @@
         }
 
         #image-form * {
-            color: white;
+            color: inherit;
             font-size: 1em;
             font-family: Arial, Helvetica, sans-serif;
             pointer-events: all;
+        }
+
+        #image-form label[for=blendmode],
+        #image-form label[for=selectionmode] {
+            color: white;
+        }
+
+        #image-form .selectionmode {
+            color: black;
+            display: inline-flex;
         }
 
         #image-canvas {
@@ -64,10 +74,19 @@
 
     <form id="image-form">
         <input style="width: 100%" type="file">
-        <section>
+
+        <label for="blendmode">
             <input type="checkbox" name="blendmode" id="image-blendmode">
-            <label for="blendmode">Show actual color</label>
-        </section>
+            Show actual color
+        </label>
+        <label for="selectionmode">
+            Selection mode
+            <section class="selectionmode">
+                <input type="button" name="selectionmode" value="new" disabled>
+                <input type="button" name="selectionmode" value="add">
+                <input type="button" name="selectionmode" value="subtract">
+            </section>
+        </label>
         <canvas id="image-canvas"></canvas>
     </form>
 </body>

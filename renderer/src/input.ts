@@ -8,6 +8,7 @@ import { LARGE_POINT, SELECTED_COLOR } from "./constants"
 
 type State = {
     selectionEnabled: boolean,
+    selectionMode: "new" | "add" | "subtract",
     selectionBox: [THREE.Vector2, THREE.Vector2] | undefined,
     selectedList: VectorRGBXY[],
     blendMultiply: boolean
@@ -15,6 +16,7 @@ type State = {
 
 const state: State = new Proxy({
     selectionEnabled: false,
+    selectionMode: "new",
     selectionBox: undefined,
     selectedList: [],
     blendMultiply: false
@@ -31,6 +33,13 @@ const state: State = new Proxy({
                 if (state.selectionEnabled === false)
                     // clear `selectionBox` when `selectionEnabled` is disabled
                     state.selectionBox = undefined
+                break
+
+            case "selectionMode":
+                const buttons = document.querySelector("#image-form .selectionmode")!.children
+                Array.prototype.forEach.call(buttons, (button: HTMLElement) => button.removeAttribute("disabled"))
+                const active = document.querySelector(`#image-form .selectionmode input[value=${state.selectionMode}]`)!
+                active.setAttribute("disabled", "")
                 break
 
             case "selectionBox":
@@ -114,7 +123,12 @@ window.addEventListener("DOMContentLoaded", () => {
         const checked = (<any>e.target).checked as boolean
         state.blendMultiply = checked
     })
+
+    document.querySelectorAll("#image-form .selectionmode input")!.forEach((button) =>
+        button.addEventListener("click", () =>
+            state.selectionMode = button.getAttribute("value") as State["selectionMode"]))
 })
+
 
 /**
  * Given a selection box, calculates all of the points in `pointCloud` that
@@ -123,7 +137,6 @@ window.addEventListener("DOMContentLoaded", () => {
 function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
     [start, end] = [start, end].map(toNormalizedDeviceCoordinates)
     // clear previous selection.
-    // TODO maybe add a feature for additive selection, like photoshop?
     const selected: VectorRGBXY[] = []
     for (const point of pointCloud.get()) {
         const { x, y } = toNormalizedDeviceCoordinates(point.xyz)
@@ -133,7 +146,13 @@ function handleSelection([start, end]: [THREE.Vector2, THREE.Vector2]) {
     }
 
     // NOTE must replace reference instead of pushing to trigger Proxy `set()` handler
-    state.selectedList = selected
+    switch (state.selectionMode) {
+        case "new": return void (state.selectedList = selected)
+        case "add": return void (state.selectedList = [...state.selectedList, ...selected])
+        case "subtract":
+            return void (state.selectedList = state.selectedList.filter(inV =>
+                selected.every(outV => !outV.equals(inV))))
+    }
 }
 
 /**
