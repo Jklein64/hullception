@@ -3,6 +3,7 @@ import * as THREE from "three"
 import { scene } from "./initialize"
 import VectorRGBXY from "./VectorRGBXY"
 import { CUBE_SIDE, SMALL_POINT } from "./constants"
+import { state } from "./input"
 
 type PointCloud = {
     value: VectorRGBXY[] | undefined,
@@ -24,6 +25,9 @@ export const pointCloud: Omit<PointCloud, "value"> = Object.defineProperty({
         if (previousPointCloud) scene.remove(previousPointCloud)
         const previousLines = scene.getObjectByName("lines")
         if (previousLines) scene.remove(previousLines)
+
+        // clear selection on point cloud change
+        state.selectedList = []
 
         // convert from RGBXY to positions and colors
         const positions: THREE.Vector3[] = []

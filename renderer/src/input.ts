@@ -14,7 +14,7 @@ type State = {
     blendMultiply: boolean
 }
 
-const state: State = new Proxy({
+export const state: State = new Proxy({
     selectionEnabled: false,
     selectionMode: "new",
     selectionPath: undefined,
