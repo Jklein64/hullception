@@ -11,8 +11,22 @@ def send_points(data: np.ndarray):
     ...
 
 
+def simplices_to_lines(simplices: np.ndarray):
+    """ For every group of three vertices, drawing lines from 1->2, 2->3, and 3->1 will create one of the faces of the convex hull.  `simplices` as returned by `scipy.spatial.ConvexHull()` is an array of shape (n, 3, 3) where each index along axis=0 is an array of three vertices.  Returns an array of vertices such that drawing a line from every even index to every odd index draws every line of the simplices. """
+    i = 0
+    formatted = np.zeros((simplices.shape[0] * 3 * 2, 3))
+    for vertex_group in simplices:
+        v1 = vertex_group[0]
+        v2 = vertex_group[1]
+        v3 = vertex_group[2]
+        formatted[i:i + 6] = np.array([v1, v2, v2, v3, v3, v1])
+        i += 6
+
+    return formatted
+
+
 def send_lines(data: np.ndarray):
-    """ Given an array of size-3 arrays (representing vertices), send this data, formatted, to the javascript server.  For every group of three vertices, drawing lines from 1->2, 2->3, and 3->1 will create one of the faces of the convex hull. """
+    """ Given an array of size-3 arrays (representing vertices), send this data to the javascript server.   """
     # NOTE look into this maybe? https://stackoverflow.com/questions/49098466/plot-3d-convex-closed-regions-in-matplot-lib/49115448
     import json
 

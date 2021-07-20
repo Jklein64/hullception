@@ -18,16 +18,15 @@ source.addEventListener("message", ({ data }) => {
 
         case "lines":
             const lines = new THREE.Group()
-            lines.name = "convexHull"
+            lines.name = "lines"
 
-            for (let i = 0; i < body.data.length; i += 3) {
+            for (let i = 0; i < body.data.length; i += 2) {
                 const v1 = new THREE.Vector3(...body.data[i + 0]).subScalar(0.5).multiplyScalar(CUBE_SIDE)
                 const v2 = new THREE.Vector3(...body.data[i + 1]).subScalar(0.5).multiplyScalar(CUBE_SIDE)
-                const v3 = new THREE.Vector3(...body.data[i + 2]).subScalar(0.5).multiplyScalar(CUBE_SIDE)
 
                 lines.add(
                     new THREE.LineSegments(
-                        new THREE.BufferGeometry().setFromPoints([v1, v2, v3, v1]),
+                        new THREE.BufferGeometry().setFromPoints([v1, v2]),
                         new THREE.LineBasicMaterial({ color: 0xffffff })))
             }
 
