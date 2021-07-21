@@ -1,7 +1,7 @@
 import * as THREE from "three"
 
 import VectorRGBXY from "./VectorRGBXY"
-import { pointCloud } from "./pointCloud"
+import pointCloud from "./pointCloud"
 import { showPointsInImage } from "./image"
 import { controls, scene } from "./initialize"
 import { LARGE_POINT, SELECTED_COLOR } from "./constants"
@@ -138,7 +138,7 @@ window.addEventListener("DOMContentLoaded", () => {
 function handleSelection(vertices: THREE.Vector2[]) {
     vertices = vertices.map(toNormalizedDeviceCoordinates)
     const selected: VectorRGBXY[] = []
-    for (const point of pointCloud.get()) {
+    for (const point of pointCloud.particles) {
         const { x, y } = toNormalizedDeviceCoordinates(point.xyz)
         // adapted from https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html#Almost%20Convex%20Polygons
         let included = false

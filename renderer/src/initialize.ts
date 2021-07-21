@@ -2,7 +2,6 @@ import * as THREE from "three"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
 
 import VectorRGBXY from "./VectorRGBXY"
-import { pointCloud } from "./pointCloud"
 import { CUBE_SIDE, PARTICLES } from "./constants"
 
 // position canvas
@@ -33,14 +32,9 @@ controls.noPan = true
 controls.rotateSpeed = Math.PI
 controls.target.set(0, 0, 0)
 
-// create particles and material
-const data = new Array(PARTICLES).fill(undefined).map(() =>
-    new VectorRGBXY(Math.random(), Math.random(), Math.random(), 0, 0))
-
 // add to scene
 export const scene = new THREE.Scene()
 scene.add(camera)
-pointCloud.set(data)
 
 // create axes
 new Array(

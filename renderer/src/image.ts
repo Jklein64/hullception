@@ -1,5 +1,5 @@
 import { IMAGE_WIDTH } from "./constants"
-import { pointCloud } from "./pointCloud"
+import pointCloud from "./pointCloud"
 import VectorRGBXY from "./VectorRGBXY"
 
 let
@@ -56,7 +56,7 @@ export function setImage(raw: Blob | File) {
         imageData = newImageData
 
         // add points to scene
-        pointCloud.set(newPointData)
+        pointCloud.particles = newPointData
     }
 }
 
