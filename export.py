@@ -1,14 +1,18 @@
 from __future__ import annotations
 import numpy as np
 import PIL.Image
-
+import json
 import requests
 
 
-def send_points(data: np.ndarray):
-    """ Given an array of points (and possibly a color), send them to the javascript server to be displayed.  This could be used, for example, to highlight which points are up for removal. """
-    # TODO
-    ...
+def send_colors(colors: np.ndarray):
+    """ Given an array of colors of shape (n, 3) where 3 represents r, g, and b, send the colors to the renderer.  This will change the colors of the current set of particles without affecting the values of the particles themself.  The first dimension of `colors` must be equivalent to the number of particles in the most recent call to `send_particles()` or `w * h` of the image of the most recent call to `send_image()`, whichever is the most recent. """
+    send("colors", json.dumps(np.ravel(colors).tolist()))
+
+
+def send_particles(data: np.ndarray):
+    """ Given an array of points, send them to the javascript server to be displayed.  This could be used, for example, to highlight which points are up for removal.  Assumes that data has shape (n, 5) where the 5 is for r, g, b, x, and y. """
+    send("particles", json.dumps(data.tolist()))
 
 
 def simplices_to_lines(simplices: np.ndarray):
@@ -28,8 +32,6 @@ def simplices_to_lines(simplices: np.ndarray):
 def send_lines(data: np.ndarray):
     """ Given an array of size-3 arrays (representing vertices), send this data to the javascript server.   """
     # NOTE look into this maybe? https://stackoverflow.com/questions/49098466/plot-3d-convex-closed-regions-in-matplot-lib/49115448
-    import json
-
     send("lines", json.dumps(data.tolist()))
 
 
