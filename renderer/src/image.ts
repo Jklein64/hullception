@@ -5,7 +5,8 @@ import VectorRGBXY from "./VectorRGBXY"
 let
     context: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
-    imageData: ImageData
+    sourceImageData: ImageData,
+    destImageData: ImageData
 
 document.addEventListener("DOMContentLoaded", () => {
     // grab elements
@@ -33,27 +34,29 @@ export function setImage(raw: Blob | File) {
         if (canvas.style.display !== "block")
             canvas.style.display = "block"
 
-        // resize
+        // resize canvas *but not image*
         const { width, height } = image
-        canvas.width = IMAGE_WIDTH
-        canvas.height = IMAGE_WIDTH * height / width
+        canvas.width = width
+        canvas.height = height
 
         // draw to canvas
-        const dimensions: [number, number, number, number] = [0, 0, canvas.width, canvas.height]
-        context.drawImage(image, ...dimensions)
+        context.drawImage(image, 0, 0, width, height)
 
         // get image data and create points
-        const newImageData = context.getImageData(...dimensions)
+        sourceImageData = context.getImageData(0, 0, width, height)
         const newPointData: VectorRGBXY[] = []
-        for (let i = 0; i < newImageData.data.length; i += 4) {
-            const [r, g, b,] = newImageData.data.slice(i, i + 4)
+        for (let i = 0; i < sourceImageData.data.length; i += 4) {
+            const [r, g, b,] = sourceImageData.data.slice(i, i + 4)
             const x = (i / 4) % canvas.width
             const y = Math.trunc((i / 4) / canvas.width)
             newPointData.push(new VectorRGBXY(r / 255, g / 255, b / 255, x, y))
         }
 
-        // update state
-        imageData = newImageData
+        // resize image
+        canvas.width = IMAGE_WIDTH
+        canvas.height = IMAGE_WIDTH * height / width
+        context.drawImage(image, 0, 0, width, height, 0, 0, canvas.width, canvas.height)
+        destImageData = context.getImageData(0, 0, canvas.width, canvas.height)
 
         // add points to scene
         pointCloud.particles = newPointData
@@ -61,31 +64,31 @@ export function setImage(raw: Blob | File) {
 }
 
 export async function showPointsInImage(selected: VectorRGBXY[], blendmode: "source-over" | "multiply" = "source-over") {
-    if (imageData) {
-        context.clearRect(0, 0, imageData.width, imageData.height)
+    if (sourceImageData && destImageData) {
+        context.clearRect(0, 0, destImageData.width, destImageData.height)
 
         // reset image if nothing is selected
         if (selected.length === 0)
-            return context.putImageData(imageData, 0, 0)
+            return context.putImageData(destImageData, 0, 0)
 
         // multiply blend mode with a 0 or 255 only layer is effectively a mask
         context.globalCompositeOperation = blendmode
 
         // lay down first layer
-        const imageBitmap = await window.createImageBitmap(imageData)
+        const imageBitmap = await window.createImageBitmap(destImageData)
         context.drawImage(imageBitmap, 0, 0)
 
         // create new solid, opaque, black image
         const mask = new ImageData(
-            new Uint8ClampedArray(imageData.data.length)
+            new Uint8ClampedArray(sourceImageData.data.length)
                 .map((_, i) => (i + 1) % 4 === 0 ? 255 : 0),
-            imageData.width,
-            imageData.height)
+            sourceImageData.width,
+            sourceImageData.height)
 
         // reveal the selected parts
         for (const vector of selected) {
             const { x, y } = vector.xy
-            const i = y * IMAGE_WIDTH + x
+            const i = y * sourceImageData.width + x
             mask.data[i * 4 + 0] = 255 // r
             mask.data[i * 4 + 1] = 255 // g
             mask.data[i * 4 + 2] = 255 // b
@@ -94,6 +97,8 @@ export async function showPointsInImage(selected: VectorRGBXY[], blendmode: "sou
 
         // mask out the unselected parts
         const maskBitmap = await window.createImageBitmap(mask)
-        context.drawImage(maskBitmap, 0, 0)
+        context.drawImage(maskBitmap,
+            0, 0, sourceImageData.width, sourceImageData.height,
+            0, 0, destImageData.width, destImageData.height)
     }
 }
