@@ -47,4 +47,3 @@ def send_image(image: PIL.Image.Image):
 
 def send(path, data):
     response = requests.post(f"http://localhost:8000/{path}", data)
-    print(response.ok)
