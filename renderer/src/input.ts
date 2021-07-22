@@ -169,24 +169,25 @@ function handleSelection(vertices: THREE.Vector2[]) {
 
     if (state.selectionExpand === "same color") {
         const colors = Array.from(pointCloud.geometry.getAttribute("color").array)
-        const selectedColors = new Array<THREE.Color>()
+        const selectedColors = new Set<string>()
 
-        for (const [i, point] of selected) {
+        for (const tuple of selected) {
+            const i = tuple[0]
             // color as it appears in the pointCloud
             const r = colors[i * 3 + 0]
             const g = colors[i * 3 + 1]
             const b = colors[i * 3 + 2]
-            selectedColors.push(new THREE.Color(r, g, b))
+            selectedColors.add(r + " " + g + " " + b)
         }
 
         for (let i = 0; i < pointCloud.particles.length; i++) {
-            const point = pointCloud.particles[i]
             // color as it appears in the pointCloud
             const r = colors[i * 3 + 0]
             const g = colors[i * 3 + 1]
             const b = colors[i * 3 + 2]
             // this current point's color shares a color with something in selection
-            if (selectedColors.some(color => color.equals(new THREE.Color(r, g, b)))) {
+            if (selectedColors.has(r + " " + g + " " + b)) {
+                const point = pointCloud.particles[i]
                 selected.push([i, point])
             }
         }
@@ -205,6 +206,9 @@ function handleSelection(vertices: THREE.Vector2[]) {
                 selected.map(v => v[1]).every(outV => !outV.equals(inV)))
             break
     }
+
+    console.timeLog("selection", "finished handling selection")
+    console.timeEnd("selection")
 }
 
 /**
