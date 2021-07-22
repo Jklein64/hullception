@@ -210,8 +210,6 @@ function handleSelection(vertices: THREE.Vector2[]) {
                     ({ rgb: { r, g, b }, xy: { x, y } }) => `${r} ${g} ${b} ${x} ${y}`))
                 state.selectedList = state.selectedList.filter(
                     ({ rgb: { r, g, b }, xy: { x, y } }) => !selectedSet.has(`${r} ${g} ${b} ${x} ${y}`))
-                // state.selectedList = state.selectedList.filter(inV =>
-                //     selected.map(v => v[1]).every(outV => !outV.equals(inV)))
                 break
         }
 
