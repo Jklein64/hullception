@@ -47,13 +47,12 @@
             pointer-events: all;
         }
 
-        #image-form label[for=blendmode],
-        #image-form label[for=selectionmode],
+        #image-form label,
         #image-form input[type=file] {
             color: white;
         }
 
-        #image-form .selectionmode {
+        #image-form :is(.selectionmode, .selectionexpand) {
             color: black;
             display: inline-flex;
         }
@@ -88,6 +87,14 @@
                 <input type="button" name="selectionmode" value="subtract">
             </section>
         </label>
+        <label for="selectionexpand">
+            Selection expand
+            <section class="selectionexpand">
+                <input type="button" name="selectionmode" value="none" disabled>
+                <input type="button" name="selectionmode" value="same color">
+            </section>
+        </label>
+
         <canvas id="image-canvas"></canvas>
     </form>
 </body>

@@ -9,6 +9,7 @@ import { LARGE_POINT, SELECTED_COLOR } from "./constants"
 type State = {
     selectionEnabled: boolean,
     selectionMode: "new" | "add" | "subtract",
+    selectionExpand: "none" | "same color",
     selectionPath: THREE.Vector2[] | undefined,
     selectedList: VectorRGBXY[],
     blendMultiply: boolean
@@ -17,6 +18,7 @@ type State = {
 export const state: State = new Proxy({
     selectionEnabled: false,
     selectionMode: "new",
+    selectionExpand: "none",
     selectionPath: undefined,
     selectedList: [],
     blendMultiply: false
@@ -26,53 +28,58 @@ export const state: State = new Proxy({
         // pass state change through before so it can be used later
         const result = Reflect.set(...(arguments as unknown as Parameters<typeof Reflect.set>))
 
-        switch (property) {
-            case "selectionEnabled":
-                // disable controls when selecting
-                controls.enabled = !state.selectionEnabled
-                if (state.selectionEnabled === false)
-                    // clear `selectionPath` when `selectionEnabled` is disabled
-                    state.selectionPath = undefined
-                break
+        if (property === "selectionEnabled") {
+            // disable controls when selecting
+            controls.enabled = !state.selectionEnabled
+            if (state.selectionEnabled === false)
+                // clear `selectionPath` when `selectionEnabled` is disabled
+                state.selectionPath = undefined
+        }
 
-            case "selectionMode":
-                const buttons = document.querySelector("#image-form .selectionmode")!.children
-                Array.prototype.forEach.call(buttons, (button: HTMLElement) => button.removeAttribute("disabled"))
-                const active = document.querySelector(`#image-form .selectionmode input[value=${state.selectionMode}]`)!
-                active.setAttribute("disabled", "")
-                break
+        else if (property === "selectionMode") {
+            const buttons = document.querySelector("#image-form .selectionmode")!.children
+            Array.prototype.forEach.call(buttons, (button: HTMLElement) => button.removeAttribute("disabled"))
+            const active = document.querySelector(`#image-form .selectionmode input[value="${state.selectionMode}"]`)!
+            active.setAttribute("disabled", "")
+        }
 
-            case "selectionPath":
-                // update selection polygon on changes to `selectionPath`
-                const polygon = document.getElementById("selection-box")
-                if (polygon) {
-                    if (state.selectionPath === undefined)
-                        polygon.removeAttribute("points")
-                    else
-                        polygon.setAttribute("points", state.selectionPath.map(v => `${v.x}, ${v.y}`).join(" "))
-                }
-                break
+        else if (property === "selectionExpand") {
+            const buttons = document.querySelector("#image-form .selectionexpand")!.children
+            Array.prototype.forEach.call(buttons, (button: HTMLElement) => button.removeAttribute("disabled"))
+            const active = document.querySelector(`#image-form .selectionexpand input[value="${state.selectionExpand}"]`)!
+            active.setAttribute("disabled", "")
+        }
 
-            case "selectedList":
-                // remove old selection
-                const previous = scene.getObjectByName("selectedPoints")
-                if (previous) scene.remove(previous)
+        else if (property === "selectionPath") {
+            // update selection polygon on changes to `selectionPath`
+            const polygon = document.getElementById("selection-box")
+            if (polygon) {
+                if (state.selectionPath === undefined)
+                    polygon.removeAttribute("points")
+                else
+                    polygon.setAttribute("points", state.selectionPath.map(v => `${v.x}, ${v.y}`).join(" "))
+            }
+        }
 
-                // update selected points to be white in color
-                const selectedGeometry = new THREE.BufferGeometry()
-                selectedGeometry.setFromPoints(state.selectedList.map(v => v.xyz))
-                const selectedMaterial = new THREE.PointsMaterial({ size: LARGE_POINT, color: SELECTED_COLOR })
-                const selectedPoints = new THREE.Points(selectedGeometry, selectedMaterial)
-                selectedPoints.name = "selectedPoints"
+        else if (property === "selectedList") {
+            // remove old selection
+            const previous = scene.getObjectByName("selectedPoints")
+            if (previous) scene.remove(previous)
 
-                // add to scene
-                scene.add(selectedPoints)
-                showPointsInImage(state.selectedList, state.blendMultiply ? "multiply" : "source-over")
-                break
+            // update selected points to be white in color
+            const selectedGeometry = new THREE.BufferGeometry()
+            selectedGeometry.setFromPoints(state.selectedList.map(v => v.xyz))
+            const selectedMaterial = new THREE.PointsMaterial({ size: LARGE_POINT, color: SELECTED_COLOR })
+            const selectedPoints = new THREE.Points(selectedGeometry, selectedMaterial)
+            selectedPoints.name = "selectedPoints"
 
-            case "blendMultiply":
-                showPointsInImage(state.selectedList, state.blendMultiply ? "multiply" : "source-over")
-                break
+            // add to scene
+            scene.add(selectedPoints)
+            showPointsInImage(state.selectedList, state.blendMultiply ? "multiply" : "source-over")
+        }
+
+        else if (property === "blendMultiply") {
+            showPointsInImage(state.selectedList, state.blendMultiply ? "multiply" : "source-over")
         }
 
         // should almost always be true
@@ -127,8 +134,16 @@ window.addEventListener("DOMContentLoaded", () => {
     })
 
     document.querySelectorAll("#image-form .selectionmode input")!.forEach((button) =>
-        button.addEventListener("click", () =>
-            state.selectionMode = button.getAttribute("value") as State["selectionMode"]))
+        button.addEventListener("click", () => {
+            const value = button.getAttribute("value")
+            state.selectionMode = value as State["selectionMode"]
+        }))
+
+    document.querySelectorAll("#image-form .selectionexpand input")!.forEach((button) =>
+        button.addEventListener("click", () => {
+            const value = button.getAttribute("value")
+            state.selectionExpand = value as State["selectionExpand"]
+        }))
 })
 
 
@@ -137,8 +152,8 @@ window.addEventListener("DOMContentLoaded", () => {
  */
 function handleSelection(vertices: THREE.Vector2[]) {
     vertices = vertices.map(toNormalizedDeviceCoordinates)
-    const selected: VectorRGBXY[] = []
-    for (const point of pointCloud.particles) {
+    const selected: [number, VectorRGBXY][] = []
+    for (let i = 0, point = pointCloud.particles[i]; i < pointCloud.particles.length; i++, point = pointCloud.particles[i]) {
         const { x, y } = toNormalizedDeviceCoordinates(point.xyz)
         // adapted from https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html#Almost%20Convex%20Polygons
         let included = false
@@ -148,20 +163,47 @@ function handleSelection(vertices: THREE.Vector2[]) {
                 if (x < (vertices[j].x - vertices[i].x) * (y - vertices[i].y)
                     / (vertices[j].y - vertices[i].y) + vertices[i].x)
                     included = !included
-        if (included) selected.push(point)
+        if (included)
+            selected.push([i, point])
     }
 
+    if (state.selectionExpand === "same color") {
+        const colors = Array.from(pointCloud.geometry.getAttribute("color").array)
+        const selectedColors = new Array<THREE.Color>()
+
+        for (const [i, point] of selected) {
+            // color as it appears in the pointCloud
+            const r = colors[i * 3 + 0]
+            const g = colors[i * 3 + 1]
+            const b = colors[i * 3 + 2]
+            selectedColors.push(new THREE.Color(r, g, b))
+        }
+
+        for (let i = 0; i < pointCloud.particles.length; i++) {
+            const point = pointCloud.particles[i]
+            // color as it appears in the pointCloud
+            const r = colors[i * 3 + 0]
+            const g = colors[i * 3 + 1]
+            const b = colors[i * 3 + 2]
+            // this current point's color shares a color with something in selection
+            if (selectedColors.some(color => color.equals(new THREE.Color(r, g, b)))) {
+                selected.push([i, point])
+            }
+        }
+    }
 
     // NOTE must replace reference instead of pushing to trigger Proxy `set()` handler
-    // this is where the selectionMode magic happens
     switch (state.selectionMode) {
         case "new":
-            return void (state.selectedList = selected)
+            state.selectedList = selected.map(v => v[1])
+            break
         case "add":
-            return void (state.selectedList = [...state.selectedList, ...selected])
+            state.selectedList = [...state.selectedList, ...selected.map(v => v[1])]
+            break
         case "subtract":
-            return void (state.selectedList = state.selectedList.filter(inV =>
-                selected.every(outV => !outV.equals(inV))))
+            state.selectedList = state.selectedList.filter(inV =>
+                selected.map(v => v[1]).every(outV => !outV.equals(inV)))
+            break
     }
 }
 
