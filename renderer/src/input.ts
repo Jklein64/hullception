@@ -151,64 +151,68 @@ window.addEventListener("DOMContentLoaded", () => {
  * Calculates all of the points in `pointCloud` that should be selected based on the given list of vertices of the selection lasso (typically taken from `state.selectionPath`).  Updates `state.selectedList`.
  */
 function handleSelection(vertices: THREE.Vector2[]) {
-    vertices = vertices.map(toNormalizedDeviceCoordinates)
-    const selected: [number, VectorRGBXY][] = []
-    for (let i = 0, point = pointCloud.particles[i]; i < pointCloud.particles.length; i++, point = pointCloud.particles[i]) {
-        const { x, y } = toNormalizedDeviceCoordinates(point.xyz)
-        // adapted from https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html#Almost%20Convex%20Polygons
-        let included = false
-        // j = i-1 but wraps around back at the beginning
-        for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++)
-            if (vertices[i].y > y !== vertices[j].y > y)
-                if (x < (vertices[j].x - vertices[i].x) * (y - vertices[i].y)
-                    / (vertices[j].y - vertices[i].y) + vertices[i].x)
-                    included = !included
-        if (included)
-            selected.push([i, point])
-    }
+    document.body.style.cursor = "wait"
 
-    if (state.selectionExpand === "same color") {
-        const colors = Array.from(pointCloud.geometry.getAttribute("color").array)
-        const selectedColors = new Set<string>()
-
-        for (const tuple of selected) {
-            const i = tuple[0]
-            // color as it appears in the pointCloud
-            const r = colors[i * 3 + 0]
-            const g = colors[i * 3 + 1]
-            const b = colors[i * 3 + 2]
-            selectedColors.add(r + " " + g + " " + b)
+    // delay so that cursor can be updated
+    window.requestAnimationFrame(() => {
+        vertices = vertices.map(toNormalizedDeviceCoordinates)
+        const selected: [number, VectorRGBXY][] = []
+        for (let i = 0, point = pointCloud.particles[i]; i < pointCloud.particles.length; i++, point = pointCloud.particles[i]) {
+            const { x, y } = toNormalizedDeviceCoordinates(point.xyz)
+            // adapted from https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html#Almost%20Convex%20Polygons
+            let included = false
+            // j = i-1 but wraps around back at the beginning
+            for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++)
+                if (vertices[i].y > y !== vertices[j].y > y)
+                    if (x < (vertices[j].x - vertices[i].x) * (y - vertices[i].y)
+                        / (vertices[j].y - vertices[i].y) + vertices[i].x)
+                        included = !included
+            if (included)
+                selected.push([i, point])
         }
 
-        for (let i = 0; i < pointCloud.particles.length; i++) {
-            // color as it appears in the pointCloud
-            const r = colors[i * 3 + 0]
-            const g = colors[i * 3 + 1]
-            const b = colors[i * 3 + 2]
-            // this current point's color shares a color with something in selection
-            if (selectedColors.has(r + " " + g + " " + b)) {
-                const point = pointCloud.particles[i]
-                selected.push([i, point])
+        if (state.selectionExpand === "same color") {
+            const colors = Array.from(pointCloud.geometry.getAttribute("color").array)
+            const selectedColors = new Set<string>()
+
+            for (const tuple of selected) {
+                const i = tuple[0]
+                // color as it appears in the pointCloud
+                const r = colors[i * 3 + 0]
+                const g = colors[i * 3 + 1]
+                const b = colors[i * 3 + 2]
+                selectedColors.add(r + " " + g + " " + b)
+            }
+
+            for (let i = 0; i < pointCloud.particles.length; i++) {
+                // color as it appears in the pointCloud
+                const r = colors[i * 3 + 0]
+                const g = colors[i * 3 + 1]
+                const b = colors[i * 3 + 2]
+                // this current point's color shares a color with something in selection
+                if (selectedColors.has(r + " " + g + " " + b)) {
+                    const point = pointCloud.particles[i]
+                    selected.push([i, point])
+                }
             }
         }
-    }
 
-    // NOTE must replace reference instead of pushing to trigger Proxy `set()` handler
-    switch (state.selectionMode) {
-        case "new":
-            state.selectedList = selected.map(v => v[1])
-            break
-        case "add":
-            state.selectedList = [...state.selectedList, ...selected.map(v => v[1])]
-            break
-        case "subtract":
-            state.selectedList = state.selectedList.filter(inV =>
-                selected.map(v => v[1]).every(outV => !outV.equals(inV)))
-            break
-    }
+        // NOTE must replace reference instead of pushing to trigger Proxy `set()` handler
+        switch (state.selectionMode) {
+            case "new":
+                state.selectedList = selected.map(v => v[1])
+                break
+            case "add":
+                state.selectedList = [...state.selectedList, ...selected.map(v => v[1])]
+                break
+            case "subtract":
+                state.selectedList = state.selectedList.filter(inV =>
+                    selected.map(v => v[1]).every(outV => !outV.equals(inV)))
+                break
+        }
 
-    console.timeLog("selection", "finished handling selection")
-    console.timeEnd("selection")
+        document.body.removeAttribute("style")
+    })
 }
 
 /**
