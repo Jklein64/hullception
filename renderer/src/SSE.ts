@@ -38,6 +38,7 @@ source.addEventListener("message", async ({ data }) => {
             await fetch(`data:image/jpeg;base64,${body.data}`)
                 .then(res => res.blob())
                 .then(setImage)
+            controls.reset()
             break
 
         case "lines":
@@ -75,8 +76,6 @@ source.addEventListener("message", async ({ data }) => {
             // see https://stackoverflow.com/questions/39419170/how-do-i-check-that-a-switch-block-is-exhaustive-in-typescript
             return badEventType(body)
     }
-
-    controls.reset()
 })
 
 function badEventType(_: never): never
