@@ -1,7 +1,7 @@
 import * as THREE from "three"
 
 import { setImage } from "./image"
-import { scene } from "./initialize"
+import { scene, controls } from "./initialize"
 import { CUBE_SIDE, LARGE_POINT } from "./constants"
 import pointCloud from "./pointCloud"
 
@@ -30,12 +30,12 @@ export type ServerSentEvent = {
 } // data.slice(i, i+3) is rgb for vertex i
 
 const source = new EventSource("/image")
-source.addEventListener("message", ({ data }) => {
+source.addEventListener("message", async ({ data }) => {
     const body = JSON.parse(data) as ServerSentEvent
 
     switch (body.type) {
         case "image":
-            fetch(`data:image/jpeg;base64,${body.data}`)
+            await fetch(`data:image/jpeg;base64,${body.data}`)
                 .then(res => res.blob())
                 .then(setImage)
             break
@@ -75,6 +75,8 @@ source.addEventListener("message", ({ data }) => {
             // see https://stackoverflow.com/questions/39419170/how-do-i-check-that-a-switch-block-is-exhaustive-in-typescript
             return badEventType(body)
     }
+
+    controls.reset()
 })
 
 function badEventType(_: never): never
