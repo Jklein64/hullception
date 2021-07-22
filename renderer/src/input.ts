@@ -206,8 +206,12 @@ function handleSelection(vertices: THREE.Vector2[]) {
                 state.selectedList = [...state.selectedList, ...selected.map(v => v[1])]
                 break
             case "subtract":
-                state.selectedList = state.selectedList.filter(inV =>
-                    selected.map(v => v[1]).every(outV => !outV.equals(inV)))
+                const selectedSet = new Set(selected.map(v => v[1]).map(
+                    ({ rgb: { r, g, b }, xy: { x, y } }) => `${r} ${g} ${b} ${x} ${y}`))
+                state.selectedList = state.selectedList.filter(
+                    ({ rgb: { r, g, b }, xy: { x, y } }) => !selectedSet.has(`${r} ${g} ${b} ${x} ${y}`))
+                // state.selectedList = state.selectedList.filter(inV =>
+                //     selected.map(v => v[1]).every(outV => !outV.equals(inV)))
                 break
         }
 
