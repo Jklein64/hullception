@@ -6,6 +6,8 @@ Holding <kbd>Shift</kbd> and clicking and dragging with the mouse allows for the
 
 This viewer hopes to bridge the gap between the image and its point-cloud representation to see how deformities or irregularities in 3D plots of the colors of an image affect the image.
 
+![Example of tool in use](./example.png)
+
 # Usage
 
 1. Clone the repository
